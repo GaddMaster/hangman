@@ -19,7 +19,7 @@ int main (int argc, char **argv)
 	struct sockaddr_in servaddr;
 	
 	/* -- Check if server IP and Port are entered as arguments -- */
-	if (argc != 2)
+	if (argc <= 2)
 		perror("usage: tcpcli <IPaddress>");
 
 	/* -- Create a connecting socket -- */

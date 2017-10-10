@@ -36,6 +36,7 @@
  	write(out, outbuf, strlen (outbuf));
 
  	/* Pick a word at random from the list */
+	srand(time(NULL));
  	whole_word = word[rand() % NUM_OF_WORDS];
  	word_length = strlen(whole_word);
  	syslog (LOG_USER | LOG_INFO, "server chose hangman word %s", whole_word);
@@ -46,8 +47,8 @@
  	
 	part_word[i] = '\0';
 
- 	sprintf (outbuf, "%s %d \n", part_word, lives);
- 	write (out, outbuf, strlen(outbuf));
+ 	//sprintf (outbuf, "%s %d \n", part_word, lives);
+ 	//write (out, outbuf, strlen(outbuf));
 
  	while (game_state == 'I')
  	/* Get a letter from player guess */

@@ -23,6 +23,7 @@
  #include <sys/wait.h>
  #include <signal.h>
  #include <syslog.h>
+ #include <time.h>
 
  # define NUM_OF_WORDS (sizeof (word) / sizeof (word [0]))
  # define MAXLEN 80 		/* Maximum size in the world of Any string */
