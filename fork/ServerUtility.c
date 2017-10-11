@@ -13,14 +13,15 @@
  * ------------------------------------------------------
  */
 
- #include "include.h"
+ #include "AddedStuff.h"
 
- /* error: A wrapper for perror*/
+ /* -- error: A wrapper for perror -- */
  void error (char *msg) {
 	perror(msg);
 	exit(1);
  }
 
+ /* -- sigchld_handler: handles signals to reap child processes -- */
  void sigchld_handler(int s)
  {
     // waitpid() might overwrite errno, so it has to be restored
@@ -29,7 +30,7 @@
     errno = saved_errno;
  }
 
- // get sockaddr, IPv4 or IPv6:
+ /* -- get sockaddr, IPv4 or IPv6 addresses -- */
  void *get_in_addr(struct sockaddr *sa)
  {
     if ( sa->sa_family == AF_INET ) {

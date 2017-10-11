@@ -11,9 +11,9 @@
  * ------------------------------------------------------
  */
 
- # include "include.h"
+ # include "AddedStuff.h"
 
- extern time_t time ();
+ extern time_t time ();	/* For seeding RNG */
 
  int maxlives = 12;	/* Stores the maximum number of lives for Player*/
  
@@ -21,58 +21,63 @@
      # include "words"
  };
 
-
+ /* -- Contains all the hangman functionality -- */
  int run_process(int in, int out) {
-	char * whole_word, part_word [MAXLEN],
- 	guess[MAXLEN], outbuf [MAXLEN];
 
- 	int lives = maxlives;
+ 	int lives = maxlives;			/* Max number of player lives */
  	int game_state = 'I';			/* I = Incomplete */
  	int i, good_guess, word_length;
  	char hostname[MAXLEN];
+	char * whole_word, part_word [MAXLEN],
+ 	guess[MAXLEN], outbuf [MAXLEN];
 
- 	gethostname (hostname, MAXLEN);
- 	sprintf(outbuf, "Playing hangman on host %s: \n \n", hostname);
- 	write(out, outbuf, strlen (outbuf));
+	/* -- Print to client that they are playing hangman on my machine -- */ 	
+	gethostname (hostname, MAXLEN);		/* i.e. sean-Virtualbox */
+ 	sprintf(outbuf, "Playing hangman on host %s: \nLives: %d", hostname, lives);
+ 	write(out, outbuf, sizeof(outbuf));
+	
 
- 	/* Pick a word at random from the list */
-	srand(time(NULL));
- 	whole_word = word[rand() % NUM_OF_WORDS];
- 	word_length = strlen(whole_word);
+ 	/* -- Pick a word at random from the list -- */
+	srand(time(NULL));				/* Seed RNG */
+ 	whole_word = word[rand() % NUM_OF_WORDS];	/* Choose random word */
+ 	word_length = strlen(whole_word);		/* Get length of word */
  	syslog (LOG_USER | LOG_INFO, "server chose hangman word %s", whole_word);
 
- 	/* No letters are guessed Initially */
+ 	/* -- No letters are guessed Initially -- */
  	for (i = 0; i <word_length; i++)
  		part_word[i]='-';
  	
 	part_word[i] = '\0';
 
- 	//sprintf (outbuf, "%s %d \n", part_word, lives);
- 	//write (out, outbuf, strlen(outbuf));
-
+	/* -- Main loop for guesses and win/lose logic -- */
  	while (game_state == 'I')
- 	/* Get a letter from player guess */
  	{
+		/* -- Get a letter from player guess -- */
 		while (read (in, guess, MAXLEN) <0) {
  			if (errno != EINTR)
  				exit (4);
  			printf ("re-read the startin \n");
- 			} /* Re-start read () if interrupted by signal */
- 	good_guess = 0;
- 	for (i = 0; i <word_length; i++) {
- 		if (guess [0] == whole_word [i]) {
- 		good_guess = 1;
- 		part_word [i] = whole_word [i];
+ 		} /* Re-start read () if interrupted by signal */
+
+ 		good_guess = 0;
+
+ 		for (i = 0; i <word_length; i++) {
+ 			if (guess [0] == whole_word [i]) {
+ 				good_guess = 1;
+ 				part_word [i] = whole_word [i];
+ 			}
  		}
- 	}
- 	if (! good_guess) lives--;
- 	if (strcmp (whole_word, part_word) == 0)
- 		game_state = 'W'; /* W ==> User Won */
- 	else if (lives == 0) {
- 		game_state = 'L'; /* L ==> User Lost */
- 		strcpy (part_word, whole_word); /* User Show the word */
- 	}
- 	sprintf (outbuf, "%s %d \n", part_word, lives);
- 	write (out, outbuf, strlen (outbuf));
+
+ 		if (! good_guess) lives--;     /* Subtract life for bad guess */
+ 		if (strcmp (whole_word, part_word) == 0)
+ 			game_state = 'W';               /* W ==> User Won */
+
+ 		else if (lives == 0) {
+ 			game_state = 'L';               /* L ==> User Lost */
+ 			strcpy (part_word, whole_word); /* User Show the word */
+ 		}
+
+ 		sprintf (outbuf, "%s %d \n", part_word, lives);
+ 		write (out, outbuf, sizeof(outbuf));
  	}
  }
