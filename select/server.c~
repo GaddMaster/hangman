@@ -1,126 +1,121 @@
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/select.h>
-#include <sys/time.h>
 
-int main(){
+#include	"unp.h"
+
+int main(int argc, char **argv)
+{
+	int			i;
+	int			max_i;
+	int 		max_file_descriptor;
+	int 		listen_file_descriptor;
+	int 		conn_file_descriptor;
+	int 		sock_file_descriptor;
+	int			nready;
+	int			client[FD_SETSIZE];
 	
-	int server_socket;
+	ssize_t		n;
+	ssize_t 	fd_set;			
+	ssize_t 	rset;
+	ssize_t 	allset;
 	
-	server_socket = socket(AF_INET, SOCK_STREAM, 0);
+	char 		buf[MAXLINE];
 	
-	if(server_socket){
-		printf("Server Socket ID : %d\n", server_socket);
-		return 0;
-		}
+	socklen_t			clilen;
 	
-	struct sockaddr_in	client_addr;
-	struct sockaddr_in	server_addr;
+	struct sockaddr_in	cliaddr;
+	struct sockaddr_in	servaddr;
 	
-	bzero(&server_addr, sizeof(server_addr));
-	server_addr.sin_family      = AF_INET;
-	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	listenfd = Socket(AF_INET, SOCK_STREAM, 0);
+
+	bzero(&servaddr, sizeof(servaddr));
+	servaddr.sin_family      = AF_INET;
+	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	servaddr.sin_port        = htons(SERV_PORT);
- 	
- 	if(bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr))){
- 		printf("Bind Error");
- 		return 0;
- 	}
- 	
- 	listen(server_socket, SOMAXCONN);
- 	
- 	fd_set master;
- 	FD_ZERO(&master);
- 	
- 	FD_SET(server_socket, &master);
- 	
- 	bool running = true;
- 	
- 	while(running){
- 	
- 		fd_set copy = master;
- 		
- 		//struct timeval * timeOut;
- 		//timeOut.tv_sec = 0;
- 		//timeOut.tv_usec = 0;
- 		
- 		int socketCount = select(0, &copy, NULL, NULL, NULL);
- 		
- 		printf("Socket Count : %d", socketCount);
- 		
- 		for(int x = 0; x < socketCount; x++){hi
- 		
- 			
- 			if(socket == server_socket){
- 			
- 				int client = accept(server_socket, NULL, NULL);
- 				
- 				FD_SET(client, &master);
- 				
- 				char welcome_message[] = "Welcome Client\r\n";
- 				send(client, welcome_message, sizeof(welcome_message) + 1, 0);
- 			
- 			}
- 			else{
- 			
- 				char buffer[4096];
- 				memset(buffer, 0, 4096);
- 				
- 				int byteIn = recv(socket, buffer, 4096, 0);
- 				
- 				if(byteIn <= 0){
- 				
- 					close(socket);
- 					FD_CLR(socket, &master);
- 				
- 				}
- 				else{
- 					
- 					for(int y = 0; y < master.fd_count; y++){
- 					
- 						int out_socket = master.fd_array[y];
- 						
- 						if(out_socket != server_socket && out_socket != socket){
- 						
- 							char message[] = "Success ";
- 						
- 							printf("Socket %d : \tBuffer : %s", socket, buffer);
- 							
- 							send(out_socket, return_message.c_str(), return_message.size() + 1, 0);
- 						
- 						}
- 						
- 					}
- 				
- 				}
- 			
- 			}
- 		
- 		}
- 	
- 	}
- 	
- 	FD_CLR(server_socket, &master);
- 	
- 	closesocket(server_socket);
- 	
- 	printf("Shutting Down Server\n");
- 	
- 	return 0;
 
+	Bind(listenfd, (SA *) &servaddr, sizeof(servaddr));
+
+	Listen(listenfd, LISTENQ);
+
+	maxfd = listenfd;			// INITIALISE
+	maxi = -1;					// INDEX INTO CLIENT[] ARRAY
+	
+	for (i = 0; i < FD_SETSIZE; i++) { client[i] = -1; } // INDICATE AVAILABLE ENTRY
+	
+	FD_ZERO(&allset);
+	
+	FD_SET(listenfd, &allset);
+
+
+	/////////////////////////////////////////////////////////////////////////////////////
+	for ( ; ; ) 
+	{
+	
+		rset = allset;			// STRUCTURE ASSIGNMENT
+		
+		nready = Select(maxfd + 1, &rset, NULL, NULL, NULL);
+
+
+
+
+		///////////////////////////////////////////////////////
+		if (FD_ISSET(listenfd, &rset)) // NEW CLIENT CONNECTION
+		{
+			clilen = sizeof(cliaddr);
+			connfd = Accept(listenfd, (SA *) &cliaddr, &clilen);
+			
+			#ifdef	NOTDEF
+			printf("new client: %s, port %d\n",
+					Inet_ntop(AF_INET, &cliaddr.sin_addr, 4, NULL),
+					ntohs(cliaddr.sin_port));
+			#endif
+
+			for (i = 0; i < FD_SETSIZE; i++)
+				if (client[i] < 0) {
+					client[i] = connfd;	// SAVE DESCRIPTOR
+					break;
+				}
+			if (i == FD_SETSIZE) { err_quit("TOO MANY CLIENTS"); }
+
+			FD_SET(connfd, &allset);	// ADD NEW DESCRIPTOR TO SET
+			if (connfd > maxfd)
+				maxfd = connfd;			// FOR SELECT
+			if (i > maxi)
+				maxi = i;				// MAX INDEX IN CLIENT[] ARRAY
+
+			if (--nready <= 0)
+				continue;				// NO MORE READABLE DESCRIPTOR
+		}
+		////////////////////////////////////////////////////////
+		
+
+
+
+		////////////////////////////////////////////////////////
+		for (i = 0; i <= maxi; i++) 	// CHECK ALL CLIENT FOR DATA
+		{
+			if ( (sockfd = client[i]) < 0) { continue; }
+				
+			if (FD_ISSET(sockfd, &rset)) 
+			{
+				if ( (n = Read(sockfd, buf, MAXLINE)) == 0) 
+				{	
+					// CONNECTION CLOSED BY CLIENT
+					Close(sockfd);
+					FD_CLR(sockfd, &allset);
+					client[i] = -1;
+				} 
+				else
+				{
+					Writen(sockfd, buf, n);
+				}
+
+				if (--nready <= 0)
+					break;				// NO MORE READABLE DESCRIPTION
+			}
+			
+		}///////////////////////////////////////////////////////
+		
+		
+		
+	}/////////////////////////////////////////////////////////////////////////////////////
 }
-
-
-
-
-
-
-
-
-
-
 
