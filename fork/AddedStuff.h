@@ -3,7 +3,7 @@
  	Team1: 	Sean Horgan - 		K00196030
 		Daniel Gadd - 		
 		Samuel McSweeny - 	
- 	include.h
+ 	AddedStuff.h
  	Description:
 		Include this file into all .c files
 		to include the necessary headers and
@@ -33,12 +33,12 @@
  # define MAXLINE 4096		/* max text line length */
  # define SA struct sockaddr 	/* Shorten the type cast of pointer argument */
 
- int run_process(int, int);
+ int run_process(int, int);	/* definition for hangman function */
 
- void error (char *msg);
+ void error (char *msg);	/* definitoin for perror wrapper */
 
- void sigchld_handler(int s);
+ void sigchld_handler(int s);	/* defiintion for child signal handler */
 
- void *get_in_addr(struct sockaddr *sa);
+ void *get_in_addr(struct sockaddr *sa);  /* definition for get_in_addr */
 
- void str_cli(FILE *fp, int sockfd);
+ void str_cli(FILE *fp, int sockfd);	  /* definition for cli I/O handler */

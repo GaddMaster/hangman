@@ -5,23 +5,24 @@
 		Samuel McSweeny - 	
  	str_cli.c
  	Description:
-		Handles I/O to and from the server.
+		Infinite loop that handles I/O 
+		to and from the server until
+		the game ends or connection
+		terminates.
  * ------------------------------------------------------
  */
 
- # include "include.h"
+ # include "AddedStuff.h"
 
  void str_cli(FILE *fp, int sockfd)
  {
-	char sendline[MAXLINE], recvline[MAXLINE];
+	int count;
+	char i_line[MAXLINE], o_line[MAXLINE]; /* input and output buffer */
 
-	while(fgets(sendline, MAXLINE, fp) != NULL) {
-		
-		write(sockfd, sendline, strlen (sendline));
-
-		if (read(sockfd, recvline, MAXLINE) == 0)
-			error("str_cli: server terminated prematurely");
-			
-		fputs(recvline, stdout);
-	}
+	/* -- Main loop to handle I/O until game or connection terminates -- */
+	while ((count = read(sockfd, i_line, MAXLINE)) > 0) {
+ 		printf("%s\n", i_line);		       /* Print input buffer */
+ 		count = read (0, o_line, MAXLINE);     /* 0 = stdin */
+ 		write (sockfd, o_line, count);	       /* Write guess to serv */
+ 	}
 } 
