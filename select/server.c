@@ -1,138 +1,121 @@
 
- #include <stdio.h>
- #include <sys/types.h>
- #include <sys/socket.h>
- #include <netinet/in.h>
- #include <stdio.h>
- #include <syslog.h>
- #include <signal.h>
- #include <errno.h>
+#include	"unp.h"
 
- extern time_t time ();
+int main(int argc, char **argv)
+{
+	int			i;
+	int			max_i;
+	int 		max_file_descriptor;
+	int 		listen_file_descriptor;
+	int 		conn_file_descriptor;
+	int 		sock_file_descriptor;
+	int			nready;
+	int			client[FD_SETSIZE];
+	
+	ssize_t		n;
+	ssize_t 	fd_set;			
+	ssize_t 	rset;
+	ssize_t 	allset;
+	
+	char 		buf[MAXLINE];
+	
+	socklen_t			clilen;
+	
+	struct sockaddr_in	cliaddr;
+	struct sockaddr_in	servaddr;
+	
+	listenfd = Socket(AF_INET, SOCK_STREAM, 0);
 
- int maxlives = 12;
- char *word [] = {
-# include "words"
-};
+	bzero(&servaddr, sizeof(servaddr));
+	servaddr.sin_family      = AF_INET;
+	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	servaddr.sin_port        = htons(SERV_PORT);
 
- # define NUM_OF_WORDS (sizeof (word) / sizeof (word [0]))
- # define MAXLEN 80 // Maximum size in the world of Any string
- # define HANGMAN_TCP_PORT 1066
+	Bind(listenfd, (SA *) &servaddr, sizeof(servaddr));
 
- main ()
- {
- 	int sock;
-	int fd;
-	int client_len;
+	Listen(listenfd, LISTENQ);
 
- 	struct sockaddr_in server;
-	struct client;
+	maxfd = listenfd;			// INITIALISE
+	maxi = -1;					// INDEX INTO CLIENT[] ARRAY
+	
+	for (i = 0; i < FD_SETSIZE; i++) { client[i] = -1; } // INDICATE AVAILABLE ENTRY
+	
+	FD_ZERO(&allset);
+	
+	FD_SET(listenfd, &allset);
 
- 	srand ((int) time ((long *) 0)); // randomize the seed
 
- 	sock = socket (AF_INET, SOCK_STREAM, 0); // 0 or IPPROTO_TCP
- 	if (sock <0) { //This error checking is the code Stevens wraps in his Socket Function etc
- 		perror ("creating stream socket");
- 		exit (1);
- 	}
+	/////////////////////////////////////////////////////////////////////////////////////
+	for ( ; ; ) 
+	{
+	
+		rset = allset;			// STRUCTURE ASSIGNMENT
+		
+		nready = Select(maxfd + 1, &rset, NULL, NULL, NULL);
 
- 	server.sin_family = AF_INET;
- 	server.sin_addr.s_addr = htonl(INADDR_ANY);
- 	server.sin_port = htons(HANGMAN_TCP_PORT);
 
- 	if (bind(sock, (struct sockaddr *) & server, sizeof(server)) <0) {
- 		perror ("binding socket");
-	 	exit (2);
- 	}
 
- 	listen (sock, 5);
 
- 	while (1) {
- 		client_len = sizeof (client);
- 		if ((fd = accept (sock, (struct sockaddr *) &client, &client_len)) <0) {
- 			perror ("accepting connection");
- 			exit (3);
- 		}
- 		play_hangman (fd, fd);
- 		close (fd);
- 	}
- }
-
- /* ---------------- Play_hangman () ---------------------*/
-
- play_hangman (int in, int out)
- {
- 	char* whole_word;
-	char* part_word [MAXLEN];
- 	char* guess[MAXLEN];
-	char* outbuf [MAXLEN];
-
- 	int lives = maxlives;
- 	int game_state = 'I'; // I = Incomplete
- 	int i;
-	int good_guess;
-	int word_length;
- 	char hostname[MAXLEN];
-
- 	gethostname (hostname, MAXLEN);
- 	sprintf(outbuf, "Playing hangman on host% s: \n \n", hostname);
- 	write(out, outbuf, strlen (outbuf));
-
- 	/* Pick a word at random from the list */
- 	whole_word = word[rand() % NUM_OF_WORDS];
- 	word_length = strlen(whole_word);
- 	syslog (LOG_USER | LOG_INFO, "server chose hangman word %s", whole_word);
-
- 	/* No letters are guessed Initially */
- 	for (i = 0; i < word_length; i++) { part_word[i]='-'; }
- 	
-	part_word[i] = '\0';
-
- 	sprintf (outbuf, "%s %d \n", part_word, lives);
- 	write (out, outbuf, strlen(outbuf));
-
-	// Game State Initialised
- 	while (game_state == 'I')
- 	{
-		while (read (in, guess, MAXLEN) <0) 
+		///////////////////////////////////////////////////////
+		if (FD_ISSET(listenfd, &rset)) // NEW CLIENT CONNECTION
 		{
- 			if (errno != EINTR){exit (4);}
- 			printf ("re-read the startin \n");
- 		} /* Re-start read () if interrupted by signal */
+			clilen = sizeof(cliaddr);
+			connfd = Accept(listenfd, (SA *) &cliaddr, &clilen);
+			
+			#ifdef	NOTDEF
+			printf("new client: %s, port %d\n",
+					Inet_ntop(AF_INET, &cliaddr.sin_addr, 4, NULL),
+					ntohs(cliaddr.sin_port));
+			#endif
 
- 		good_guess = 0;
+			for (i = 0; i < FD_SETSIZE; i++)
+				if (client[i] < 0) {
+					client[i] = connfd;	// SAVE DESCRIPTOR
+					break;
+				}
+			if (i == FD_SETSIZE) { err_quit("TOO MANY CLIENTS"); }
 
-	 	for (i = 0; i <word_length; i++) 
+			FD_SET(connfd, &allset);	// ADD NEW DESCRIPTOR TO SET
+			if (connfd > maxfd)
+				maxfd = connfd;			// FOR SELECT
+			if (i > maxi)
+				maxi = i;				// MAX INDEX IN CLIENT[] ARRAY
+
+			if (--nready <= 0)
+				continue;				// NO MORE READABLE DESCRIPTOR
+		}
+		////////////////////////////////////////////////////////
+		
+
+
+
+		////////////////////////////////////////////////////////
+		for (i = 0; i <= maxi; i++) 	// CHECK ALL CLIENT FOR DATA
 		{
-	 		if (guess [0] == whole_word [i]) 
+			if ( (sockfd = client[i]) < 0) { continue; }
+				
+			if (FD_ISSET(sockfd, &rset)) 
 			{
-		 		good_guess = 1;
-		 		part_word [i] = whole_word [i];
-	 		}
-	 	}
+				if ( (n = Read(sockfd, buf, MAXLINE)) == 0) 
+				{	
+					// CONNECTION CLOSED BY CLIENT
+					Close(sockfd);
+					FD_CLR(sockfd, &allset);
+					client[i] = -1;
+				} 
+				else
+				{
+					Writen(sockfd, buf, n);
+				}
 
- 		if (! good_guess) lives--;
-
- 		if (strcmp (whole_word, part_word) == 0){game_state = 'W';} // W ==> User Won
- 		else if (lives == 0) 
-		{
-	 		game_state = 'L'; // L ==> User Lost
-	 		strcpy (part_word, whole_word); // User Show the word
- 		}
-
-	 	sprintf (outbuf, "%s %d \n", part_word, lives);
-	 	write (out, outbuf, strlen (outbuf));
- 	}
-
+				if (--nready <= 0)
+					break;				// NO MORE READABLE DESCRIPTION
+			}
+			
+		}///////////////////////////////////////////////////////
+		
+		
+		
+	}/////////////////////////////////////////////////////////////////////////////////////
 }
-
-
-
-
-
-
-
-
-
-
 
