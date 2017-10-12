@@ -5,114 +5,115 @@ int main(int argc, char **argv)
 {
 	int			i;
 	int			max_i;
-	int 		max_file_descriptor;
-	int 		listen_file_descriptor;
-	int 		conn_file_descriptor;
-	int 		sock_file_descriptor;
+	int 		max_FD;
+	int 		listen_FD;
+	int 		connection_FD;
+	int 		socket_FD;
 	int			nready;
 	int			client[FD_SETSIZE];
 	
 	ssize_t		n;
-	ssize_t 	fd_set;			
-	ssize_t 	rset;
-	ssize_t 	allset;
+	ssize_t 	FD_set;			
+	ssize_t 	copy_set;
+	ssize_t 	master_set;
 	
-	char 		buf[MAXLINE];
+	char 		buffer[MAXLINE];
 	
-	socklen_t			clilen;
+	socklen_t	client_len;
 	
-	struct sockaddr_in	cliaddr;
-	struct sockaddr_in	servaddr;
+	struct sockaddr_in	client_addr;
+	struct sockaddr_in	server_addr;
 	
-	listenfd = Socket(AF_INET, SOCK_STREAM, 0);
+	listen_FD = Socket(AF_INET, SOCK_STREAM, 0);
 
-	bzero(&servaddr, sizeof(servaddr));
-	servaddr.sin_family      = AF_INET;
-	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	servaddr.sin_port        = htons(SERV_PORT);
+	bzero(&server_addr, sizeof(server_addr));
+	server_addr.sin_family      = AF_INET;
+	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	server_addr.sin_port        = htons(SERV_PORT);
 
-	Bind(listenfd, (SA *) &servaddr, sizeof(servaddr));
+	Bind(listen_FD, (SA *) &server_addr, sizeof(server_addr));
 
-	Listen(listenfd, LISTENQ);
+	Listen(listen_FD, LISTENQ);
 
-	maxfd = listenfd;			// INITIALISE
-	maxi = -1;					// INDEX INTO CLIENT[] ARRAY
+	max_FD = listen_FD;			// INITIALISE
+	max_i = -1;					// INDEX INTO CLIENT[] ARRAY
 	
 	for (i = 0; i < FD_SETSIZE; i++) { client[i] = -1; } // INDICATE AVAILABLE ENTRY
 	
-	FD_ZERO(&allset);
+	FD_ZERO(&master_set);
 	
-	FD_SET(listenfd, &allset);
+	FD_SET(listen_FD, &master_set);
 
 
 	/////////////////////////////////////////////////////////////////////////////////////
 	for ( ; ; ) 
 	{
 	
-		rset = allset;			// STRUCTURE ASSIGNMENT
+		copy_set = master_set;			// STRUCTURE ASSIGNMENT
 		
-		nready = Select(maxfd + 1, &rset, NULL, NULL, NULL);
+		nready = Select(max_FD + 1, &master_set, NULL, NULL, NULL);
 
 
 
 
 		///////////////////////////////////////////////////////
-		if (FD_ISSET(listenfd, &rset)) // NEW CLIENT CONNECTION
+		
+		if (FD_ISSET(listen_FD, &rset)) // NEW CLIENT CONNECTION
 		{
-			clilen = sizeof(cliaddr);
-			connfd = Accept(listenfd, (SA *) &cliaddr, &clilen);
+			client_len = sizeof(client_addr);
+			connection_FD = Accept(listen_FD, (SA *) &client_addr, &client_len);
 			
 			#ifdef	NOTDEF
-			printf("new client: %s, port %d\n",
-					Inet_ntop(AF_INET, &cliaddr.sin_addr, 4, NULL),
-					ntohs(cliaddr.sin_port));
+				printf("NEW CLIENT: %s, PORT %d\n", Inet_ntop(AF_INET, &client_addr.sin_addr, 4, NULL),ntohs(client_addr.sin_port));
 			#endif
 
 			for (i = 0; i < FD_SETSIZE; i++)
-				if (client[i] < 0) {
-					client[i] = connfd;	// SAVE DESCRIPTOR
+			{
+				if (client[i] < 0) 
+				{
+					client[i] = connection_FD;	// SAVE DESCRIPTOR
 					break;
 				}
-			if (i == FD_SETSIZE) { err_quit("TOO MANY CLIENTS"); }
+			}
+			
+			if (i == FD_SETSIZE) { err_quit("TOO MANY CLIENTS"); }		//EDN PROGRAM AS TOO MANY CLIENTS
 
-			FD_SET(connfd, &allset);	// ADD NEW DESCRIPTOR TO SET
-			if (connfd > maxfd)
-				maxfd = connfd;			// FOR SELECT
-			if (i > maxi)
-				maxi = i;				// MAX INDEX IN CLIENT[] ARRAY
+			FD_SET(connection_FD, &master_set);							// ADD NEW DESCRIPTOR TO SET
+			
+			if (connection_FD > max_FD) { max_FD = connection_FD; }		// FOR SELECT
+			
+			if (i > max_i) { max_i = i; }								// MAX INDEX IN CLIENT[] ARRAY
 
-			if (--nready <= 0)
-				continue;				// NO MORE READABLE DESCRIPTOR
+			if (--nready <= 0) { continue; }							// NO MORE READABLE DESCRIPTOR
 		}
+		
 		////////////////////////////////////////////////////////
 		
 
 
 
 		////////////////////////////////////////////////////////
+		
 		for (i = 0; i <= maxi; i++) 	// CHECK ALL CLIENT FOR DATA
 		{
-			if ( (sockfd = client[i]) < 0) { continue; }
+			if ( (socket_FD = client[i]) < 0) { continue; }
 				
-			if (FD_ISSET(sockfd, &rset)) 
+			if (FD_ISSET(socket_FD, &copy_set)) 
 			{
-				if ( (n = Read(sockfd, buf, MAXLINE)) == 0) 
+				if ( (n = Read(socket_FD, buffer, MAXLINE)) == 0) 
 				{	
 					// CONNECTION CLOSED BY CLIENT
-					Close(sockfd);
-					FD_CLR(sockfd, &allset);
+					Close(socket_FD);
+					FD_CLR(socket_FD, &master_set);
 					client[i] = -1;
 				} 
-				else
-				{
-					Writen(sockfd, buf, n);
-				}
+				else{Writen(socket_FD, buffer, n);}
 
-				if (--nready <= 0)
-					break;				// NO MORE READABLE DESCRIPTION
+				if (--nready <= 0) { break; }							// NO MORE READABLE DESCRIPTION
 			}
-			
-		}///////////////////////////////////////////////////////
+		}
+		
+		///////////////////////////////////////////////////////
 		
 		
 		
