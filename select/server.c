@@ -1,5 +1,28 @@
+#include	<sys/types.h>
+#include	<sys/socket.h>
+#include	<sys/time.h>
+#include	<time.h>
+#include	<netinet/in.h>
+#include	<arpa/inet.h>
+#include	<errno.h>
+#include	<fcntl.h>
+#include	<netdb.h>
+#include	<signal.h>
+#include	<stdio.h>
+#include	<stdlib.h>
+#include	<string.h>
+#include	<sys/stat.h>
+#include	<sys/uio.h>
+#include	<unistd.h>
+#include	<sys/wait.h>
+#include	<sys/un.h>		
+#include	<sys/select.h>	
+#include	<sys/sysctl.h>
+#include	<poll.h>
+#include	<strings.h>
+#include	<sys/ioctl.h>
+#include	<pthread.h>
 
-#include	"unp.h"
 
 int main(int argc, char **argv)
 {
@@ -17,51 +40,58 @@ int main(int argc, char **argv)
 	ssize_t 	copy_set;
 	ssize_t 	master_set;
 	
-	char 		buffer[MAXLINE];
+	char 		buffer[1024];
 	
 	socklen_t	client_len;
 	
 	struct sockaddr_in	client_addr;
 	struct sockaddr_in	server_addr;
 	
-	listen_FD = Socket(AF_INET, SOCK_STREAM, 0);
+	listen_FD = socket(AF_INET, SOCK_STREAM, 0);
 
 	bzero(&server_addr, sizeof(server_addr));
 	server_addr.sin_family      = AF_INET;
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	server_addr.sin_port        = htons(SERV_PORT);
-
-	Bind(listen_FD, (SA *) &server_addr, sizeof(server_addr));
-
-	Listen(listen_FD, LISTENQ);
-
-	max_FD = listen_FD;			// INITIALISE
-	max_i = -1;					// INDEX INTO CLIENT[] ARRAY
+	server_addr.sin_port        = htons(1000);
 	
-	for (i = 0; i < FD_SETSIZE; i++) { client[i] = -1; } // INDICATE AVAILABLE ENTRY
+	//printf("AF_FAMILY : %s", server_addr.sin_family);	//DEBUGGING
+	//printf("ADDRESS : %s", server_addr.sin_addr.s_addr);	//DEBUGGING
+	//printf("PORT : %d", server_addr.sin_port);				//DEBUGGING
+
+	bind(listen_FD, (struct sockaddr *) &server_addr, sizeof(server_addr));
+
+	listen(listen_FD, SOMAXCONN);
+
+	max_FD = listen_FD;										// INITIALISE - 1 FD IS STD INPUT - 2 IS STAD OUTPUT - 3 ALSO IS SOMETHING - 4 IS WHATS NOW AVAILABLE AND WE CONTINUE OF THERE - SO WE KNOW 1,2,3 ARE BY DEFAULT TAKEN BY LINUX AND WE MORE THAN LIKELY ARE 4 NOW. THIS IS THE MAX WE HAVE TO CHECK
+	max_i = -1;												// INDEX INTO CLIENT[] ARRAY
 	
-	FD_ZERO(&master_set);
+	for (i = 0; i < FD_SETSIZE; i++) { client[i] = -1; } 	// INDICATE AVAILABLE ENTRY
 	
-	FD_SET(listen_FD, &master_set);
+	fd_(&master_set);									//ZERO OUT THE SET
+	
+	FD_SET(listen_FD, &master_set);							//TELL KERNEL LISTEN TO THIS SET - THE LISTEN FILE DESCRIPTOR
 
 
 	/////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////
+	
 	for ( ; ; ) 
 	{
 	
-		copy_set = master_set;			// STRUCTURE ASSIGNMENT
+		copy_set = master_set;			// STRUCTURE ASSIGNMENT - WE COPY FROM MASTER SET AS NOT TO KEEP A SAFE SET 
 		
 		nready = Select(max_FD + 1, &master_set, NULL, NULL, NULL);
 
-
+		printf("N READY : %d", nready);//DEBUGGING
 
 
 		///////////////////////////////////////////////////////
+		//CHECK FOR NEW CLIENTS
 		
-		if (FD_ISSET(listen_FD, &rset)) // NEW CLIENT CONNECTION
+		if (FD_ISSET(listen_FD, &copy_set)) // NEW CLIENT CONNECTION 
 		{
 			client_len = sizeof(client_addr);
-			connection_FD = Accept(listen_FD, (SA *) &client_addr, &client_len);
+			connection_FD = accept(listen_FD, (struct sockaddr *) &client_addr, &client_len);
 			
 			#ifdef	NOTDEF
 				printf("NEW CLIENT: %s, PORT %d\n", Inet_ntop(AF_INET, &client_addr.sin_addr, 4, NULL),ntohs(client_addr.sin_port));
@@ -93,6 +123,7 @@ int main(int argc, char **argv)
 
 
 		////////////////////////////////////////////////////////
+		//CHECK ALL CLIENTS FOR DATA
 		
 		for (i = 0; i <= maxi; i++) 	// CHECK ALL CLIENT FOR DATA
 		{
@@ -115,8 +146,9 @@ int main(int argc, char **argv)
 		
 		///////////////////////////////////////////////////////
 		
-		
-		
-	}/////////////////////////////////////////////////////////////////////////////////////
+	}
+	
+	/////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////
 }
 
