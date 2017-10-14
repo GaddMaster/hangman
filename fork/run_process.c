@@ -33,7 +33,7 @@
 
 	/* -- Print to client that they are playing hangman on my machine -- */ 	
 	gethostname (hostname, MAXLEN);		/* i.e. sean-Virtualbox */
- 	sprintf(outbuf, "Playing hangman on host %s: \nLives: %d", hostname, lives);
+ 	sprintf(outbuf, "Playing hangman on host %s: \n", hostname);
  	write(out, outbuf, sizeof(outbuf));
 	
 
@@ -48,6 +48,9 @@
  		part_word[i]='-';
  	
 	part_word[i] = '\0';
+
+	sprintf (outbuf, "%s %d \n", part_word, lives);
+ 	write (out, outbuf, strlen(outbuf));
 
 	/* -- Main loop for guesses and win/lose logic -- */
  	while (game_state == 'I')
