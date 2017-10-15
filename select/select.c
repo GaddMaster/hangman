@@ -116,7 +116,7 @@ int main(int argc , char *argv[])
             {
                 perror("ACCEPT ERROR");
                 exit(EXIT_FAILURE);
-            }
+            }else{printf("NEW CLIENT ACCEPTED : %d", new_socket);}
           
             //INFORM USER OF SOCKET NUMBER - USED IN SEND AND RECIEVE COMMAND
             printf("NEW CONNECTION ON SOCKET FILE DESCRIPTOR %d \t IP %s \t PORT %d \n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
@@ -125,7 +125,7 @@ int main(int argc , char *argv[])
             if( send(new_socket, message, strlen(message), 0) != strlen(message) ) 
             {
                 perror("SEND ERROR");
-            }
+            }else{printf("SEND WELCOME MESSAGE TO SOCKET %d", new_socket);}
               
             printf("WELCOME MESSAGE SENT\n");
               
