@@ -40,7 +40,7 @@
 	   select(maxfdp1, &rset, NULL, NULL, NULL);
 
 	   /* If the socket is readble upon return from select() the echoed
-	      line is read and output by fputs */
+	      line is read and output by write */
 	   if (FD_ISSET(sockfd, &rset)) { /* socket is readable */
 	      if( (n = read(sockfd, buf, MAXLINE)) == 0) {
   	         if(stdineof == 1)
@@ -49,7 +49,6 @@
 	            error("str_cli: Server terminated prematurely");
 	      }
 	      write(fileno(stdout), buf, n);
-	      //fputs(buf, stdout);
 	   }
 
 	   /* if the input is readable copy it to the outgoing buffer
