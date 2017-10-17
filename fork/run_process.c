@@ -33,8 +33,8 @@
 
 	/* -- Print to client that they are playing hangman on my machine -- */ 	
 	gethostname (hostname, MAXLEN);		/* i.e. sean-Virtualbox */
- 	sprintf(outbuf, "Playing hangman on host %s: \nLives: %d", hostname, lives);
- 	write(out, outbuf, sizeof(outbuf));
+ 	sprintf(outbuf, "Playing hangman on host %s:\n", hostname);
+ 	write(out, outbuf, strlen(outbuf));
 	
 
  	/* -- Pick a word at random from the list -- */
@@ -49,6 +49,9 @@
  	
 	part_word[i] = '\0';
 
+	sprintf (outbuf, "%s %d \n", part_word, lives);
+ 	write (out, outbuf, strlen(outbuf));
+
 	/* -- Main loop for guesses and win/lose logic -- */
  	while (game_state == 'I')
  	{
@@ -61,6 +64,7 @@
 
  		good_guess = 0;
 
+		/* If guess matches a letter in the word, reveal that letter */
  		for (i = 0; i <word_length; i++) {
  			if (guess [0] == whole_word [i]) {
  				good_guess = 1;
@@ -69,15 +73,24 @@
  		}
 
  		if (! good_guess) lives--;     /* Subtract life for bad guess */
- 		if (strcmp (whole_word, part_word) == 0)
+
+		/* If all letters are guessed correctly */
+ 		if (strcmp (whole_word, part_word) == 0){
  			game_state = 'W';               /* W ==> User Won */
+			sprintf(outbuf, "Congratulations, You Win!\n");
+			write(out,  outbuf, strlen(outbuf));
+			close(out);			/* Close socket */
+		}
 
  		else if (lives == 0) {
  			game_state = 'L';               /* L ==> User Lost */
+			sprintf(outbuf, "Hard luck, You Lost!\n");
+			write(out,  outbuf, strlen(outbuf));
  			strcpy (part_word, whole_word); /* User Show the word */
  		}
 
+		/* Copy part_word and lives to outgoing buffer */
  		sprintf (outbuf, "%s %d \n", part_word, lives);
- 		write (out, outbuf, sizeof(outbuf));
- 	}
+ 		write (out, outbuf, strlen(outbuf));  /* Write to client sock */
+ 	} // end while
  }

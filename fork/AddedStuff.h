@@ -24,6 +24,8 @@
  #include <signal.h>
  #include <syslog.h>
  #include <time.h>
+ #include <sys/select.h>	/* for convenience */
+ #include <sys/time.h>	/* timeval{} for select() */
 
  # define NUM_OF_WORDS (sizeof (word) / sizeof (word [0]))
  # define MAXLEN 80 		/* Maximum size in the world of Any string */
@@ -32,6 +34,8 @@
  # define BACKLOG 10		/* 2nd argument to listen() */
  # define MAXLINE 4096		/* max text line length */
  # define SA struct sockaddr 	/* Shorten the type cast of pointer argument */
+
+ # define max(a,b) ((a) > (b) ? (a) : (b))
 
  int run_process(int, int);	/* definition for hangman function */
 
