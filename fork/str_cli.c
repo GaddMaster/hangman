@@ -16,20 +16,18 @@
 
    void str_cli(FILE *fp, int sockfd)
    {
-	int maxfdp1, stdineof;
+	int maxfdp1;
 	fd_set rset;
 	//char sendline[MAXLINE], recvline[MAXLINE];
 	char buf[MAXLINE];
 	int n;
 
-// fp - bit corresponding to standard I/O file pointer
-// sockfd - bit corresponding to socket
-	stdineof = 0;
+	// fp - bit corresponding to standard I/O file pointer
+	// sockfd - bit corresponding to socket
 	FD_ZERO(&rset);
-	for ( ; ; ) {
-	   if(stdineof == 0)	   
-		FD_SET(fileno (fp), & rset);
-	   FD_SET(sockfd, & rset);
+	for ( ; ; ) {	   
+	   FD_SET(fileno (fp), & rset);
+	   FD_SET(sockfd, &rset);
 	   
 	   /* fileno: convert I/O file pointer to corresponding descriptor */
 	   /* max: calculate the maximum of the two descriptors */
@@ -42,24 +40,17 @@
 	   /* If the socket is readble upon return from select() the echoed
 	      line is read and output by write */
 	   if (FD_ISSET(sockfd, &rset)) { /* socket is readable */
-	      if( (n = read(sockfd, buf, MAXLINE)) == 0) {
-  	         if(stdineof == 1)
-		    return;
-		 else
+	      if((n = read(sockfd, buf, MAXLINE)) == 0)
 	            error("str_cli: Server terminated prematurely");
-	      }
+	      //printf("%s", recvline);
 	      write(fileno(stdout), buf, n);
 	   }
 
 	   /* if the input is readable copy it to the outgoing buffer
 	      then write it to the server socket */
 	   if (FD_ISSET(fileno (fp), &rset)) { /* input is readable */
-	      if( (n = read(fileno(fp), buf, MAXLINE)) == 0) {
-		 stdineof = 1;
-		 shutdown(sockfd, SHUT_WR); /* send FIN */
-	    	 FD_CLR(fileno (fp), &rset);
-		 continue;
-	      }
+	      if((n = read(fileno(fp), buf, MAXLINE)) == 0)
+		 return;
 	      write(sockfd, buf, n);
 	      //system("clear");    /* Uncomment to clear console every guess */
 	   }

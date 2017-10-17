@@ -79,7 +79,6 @@
  			game_state = 'W';               /* W ==> User Won */
 			sprintf(outbuf, "Congratulations, You Win!\n");
 			write(out,  outbuf, strlen(outbuf));
-			close(out);			/* Close socket */
 		}
 
  		else if (lives == 0) {
