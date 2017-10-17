@@ -21,8 +21,6 @@
 #include	<poll.h>
 #include	<strings.h>
 #include	<sys/ioctl.h>
-#include	<pthread.h>
-
 
 int main(int argc, char **argv)
 {
