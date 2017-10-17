@@ -61,6 +61,7 @@
 		 continue;
 	      }
 	      write(sockfd, buf, n);
+	      //system("clear");    /* Uncomment to clear console every guess */
 	   }
        }
    }
