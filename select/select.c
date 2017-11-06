@@ -13,12 +13,19 @@
 #include <sys/time.h>
 
 char *word [] = {
-     # include "words"
+     # include "../words"
  };
   
 #define TRUE   1
 #define FALSE  0
 #define PORT 8888
+
+struct Players{
+	int client_socket;
+	char word[30];
+	char guess[30];
+	int sessionID;
+};
  
 int main(int argc , char *argv[])
 {
@@ -27,17 +34,9 @@ int main(int argc , char *argv[])
     int addrlen;
     int new_socket;
     
-    int client_socket[30];
-    int max_clients = 30;
-    
-    char guess[30];
-    int max_guess = 30;
-    
-    int sessionID[30];
-    int max_sessionID = 30;
-    
-    char word
-    
+    struct Players players[30];
+    int max_players = 30;
+    int max_guess = 10;
     
     int activity;
     int i;
@@ -47,20 +46,22 @@ int main(int argc , char *argv[])
     
     struct sockaddr_in address;
       
-    char buffer[1025];
+    char buffer[1024];
       
     fd_set master_set;
       
     char * message = "WELCOME TO HANGMAN EXPRESS \r\n";
+    char * serverFull = "SERVER IS FULL - PLEASE TRY AGAIN LATER \r\n";
   
-    for (i = 0; i < max_clients; i++) client_socket[i] = 0; //INITILISE ALL CLIENT SOCKETS TO ZERO
+    for (i = 0; i < max_players; i++) players[i].client_socket = 0; //INITILISE ALL CLIENT SOCKETS TO ZERO
     
  	// PICK RANDOM WORD FROM OUR LIST
-	srand(time(NULL));
- 	whole_word = word[rand() % NUM_OF_WORDS];
- 	word_length = strlen(whole_word);
- 	for (i = 0; i <word_length; i++) part_word[i]='-';
-	part_word[i] = '\0';
+	//srand(time(NULL));
+ 	//whole_word = word[rand() % NUM_OF_WORDS];git pull origin master
+
+ 	//word_length = strlen(whole_word);
+ 	//for (i = 0; i <word_length; i++) part_word[i]='-';
+	//part_word[i] = '\0';
       
       
     //CREATE MAIN SOCKET
@@ -114,11 +115,11 @@ int main(int argc , char *argv[])
         
         /////////////////////////////////////////////////////////////////////////////////
         //ADD CHILD SOCKET TO SET
-        for ( i = 0 ; i < max_clients ; i++) 
+        for ( i = 0 ; i < max_players ; i++) 
         {
-            sd = client_socket[i]; // SOCKET DESCRIPTOR
+            sd = players[i].client_socket; // SOCKET DESCRIPTOR
             if(sd > 0) FD_SET( sd , &master_set); // ADD TO READ LIST IOF VALID SOCKET DESCRIPTOR
-            if(sd > max_sd) max_sd = sd; // WE NEED HIGHEST FILE DESCRIPTOR FOR THE SECLECT FUNCTION
+            if(sd > max_sd) max_sd = sd; // WE NEED HIGHEST FILE DESCRIPTOR FOR THE SELECT FUNCTION
         }
         /////////////////////////////////////////////////////////////////////////////////
     
@@ -142,8 +143,7 @@ int main(int argc , char *argv[])
           
             //INFORM USER OF SOCKET NUMBER - USED IN SEND AND RECIEVE COMMAND
             printf("FILE DESCRIPTOR %d IP %s PORT %d \n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
-        k
-        
+
             // SEND WELCOME MESSAGE
             if( send(new_socket, message, strlen(message), 0) != strlen(message) ) 
             {
@@ -152,16 +152,39 @@ int main(int argc , char *argv[])
               
             printf("WELCOME MESSAGE SENT\n");
               
-            //add new socket to array of sockets
-            for (i = 0; i < max_clients; i++) 
+            //ADD NEW SOCKET TO ARRAY OF SOCKETS IN PLAYER
+            for (i = 0; i < max_players; i++) 
             {
-                //if position is empty
-                if( client_socket[i] == 0 )
+                //IF WE FIND A EMPTY PLAYER POSITION
+                if( players[i].client_socket == 0 )
                 {
-                    client_socket[i] = new_socket;
-                    printf("SOCKET ADDED AS %d\n" , i);
-                     
+                    players[i].client_socket = new_socket;
+                    
+                    players[i].sessionID = rand() % 10000;
+                    int unique = TRUE;
+                    
+                   	do
+                    {
+						for (int checker = 0; checker < max_players; checker++) 
+						{
+							if(players[i].sessionID == players[checker].sessionID) unique = FALSE;
+						}
+						
+                    } while(!unique);
+				    
+                    printf("SESSION ID %d\n", players[i].sessionID);
+                    
                     break;
+                }
+                else
+                {
+                	printf("SERVER FULL - PLAYER REQUEST DENIED %d\n", players[i].sessionID);
+                	
+				    if( send(new_socket, serverFull, strlen(serverFull), 0) != strlen(serverFull) ) 
+				    {
+				        perror("SEND ERROR");
+				    }else{printf("SEND SERVER FULL MESSAGE TO SOCKET %d", new_socket);}
+                		
                 }
             }
         }
@@ -170,9 +193,9 @@ int main(int argc , char *argv[])
         
           
         //IO OPERATION ON ANOTHER SOCKET
-        for (i = 0; i < max_clients; i++) 
+        for (i = 0; i < max_players; i++) 
         {
-            sd = client_socket[i];
+            sd = players[i].client_socket;
               
             if (FD_ISSET( sd , &master_set)) 
             {
@@ -185,7 +208,7 @@ int main(int argc , char *argv[])
                       
                     //CLOSE SOCKET AND MARK AS ZERO
                     close( sd );
-                    client_socket[i] = 0;
+                    players[i].client_socket = 0;
                 }
                 else//ECHO MESSAGE TO CLIENT
                 {
@@ -201,7 +224,20 @@ int main(int argc , char *argv[])
 } 
 
 
-
+static char *rand_string(char *str, size_t size)
+{
+    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX0123456789led
+    ";
+    if (size) {
+        --size;
+        for (size_t n = 0; n < size; n++) {
+            int key = rand() % (int) (sizeof charset - 1);
+            str[n] = charset[key];
+        }
+        str[size] = '\0';
+    }
+    return str;
+}
 
 
 
