@@ -1,4 +1,4 @@
-
+gg
 
 int main(int argc, char **argv)
 {
@@ -49,11 +49,7 @@ int main(int argc, char **argv)
 	
 	for (i = 0; i < FD_SETSIZE; i++) { client[i] = -1; } // INDICATE AVAILABLE ENTRY
 	
-<<<<<<< HEAD
-	fd_(&master_set);									//ZERO OUT THE SET
-=======
 	FD_ZERO(&master_set); // ZERO OUT THE SET
->>>>>>> db40e00d5b675b6ff750b1724e107c43c951fdc4
 	
 	FD_SET(listen_FD, &master_set); //TELL KERNEL LISTEN TO THIS SET - THE LISTEN FILE DESCRIPTOR
 
@@ -71,7 +67,7 @@ int main(int argc, char **argv)
 		
 		printf("SET COPIED\n");
 		
-		nready = select(max_FD + 1, &master_set, NULL, NULL, timeOut);
+		nready = select(max_FD + 1, &master_set, NULL, NULL, NULL);
 		
 		printf("AFTER SELECT\n");
 
@@ -116,7 +112,7 @@ int main(int argc, char **argv)
 
 
 		////////////////////////////////////////////////////////
-		//CHECK ALL CLIENTS FOR DATA
+		//CHECK ALL CLIENTS ON SOCKET FOR DATA
 		
 		for (i = 0; i <= max_i; i++) // CHECK ALL CLIENT FOR DATA
 		{
@@ -131,7 +127,12 @@ int main(int argc, char **argv)
 					FD_CLR(socket_FD, &master_set);
 					client[i] = -1;
 				} 
-				else{write(socket_FD, buffer, n);}
+				else{
+				//ECHO BACK TO CLIENT
+				printf("BUFFER : %s", buffer);
+				write(socket_FD, buffer, n);
+				
+				}
 
 				if (--nready <= 0) { break; } // NO MORE READABLE DESCRIPTION
 			}

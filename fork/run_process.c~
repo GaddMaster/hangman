@@ -18,7 +18,7 @@
  int maxlives = 12;	/* Stores the maximum number of lives for Player*/
  
  char *word [] = {	/* Array to store the words from 'words' text file */
-     # include "../words"
+     # include "words"
  };
 
  /* -- Contains all the hangman functionality -- */

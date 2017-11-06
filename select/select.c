@@ -11,6 +11,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/time.h>
+
+char *word [] = {
+     # include "words"
+ };
   
 #define TRUE   1
 #define FALSE  0
@@ -22,8 +26,19 @@ int main(int argc , char *argv[])
     int serv_socket;
     int addrlen;
     int new_socket;
+    
     int client_socket[30];
     int max_clients = 30;
+    
+    char guess[30];
+    int max_guess = 30;
+    
+    int sessionID[30];
+    int max_sessionID = 30;
+    
+    char word
+    
+    
     int activity;
     int i;
     int valread;
@@ -36,9 +51,16 @@ int main(int argc , char *argv[])
       
     fd_set master_set;
       
-    char * message = "WELCOME TO MY SERVER\r\n";
+    char * message = "WELCOME TO HANGMAN EXPRESS \r\n";
   
     for (i = 0; i < max_clients; i++) client_socket[i] = 0; //INITILISE ALL CLIENT SOCKETS TO ZERO
+    
+ 	// PICK RANDOM WORD FROM OUR LIST
+	srand(time(NULL));
+ 	whole_word = word[rand() % NUM_OF_WORDS];
+ 	word_length = strlen(whole_word);
+ 	for (i = 0; i <word_length; i++) part_word[i]='-';
+	part_word[i] = '\0';
       
       
     //CREATE MAIN SOCKET
@@ -116,10 +138,11 @@ int main(int argc , char *argv[])
             {
                 perror("ACCEPT ERROR");
                 exit(EXIT_FAILURE);
-            }else{printf("NEW CLIENT ACCEPTED : %d", new_socket);}
+            }else{printf("NEW CLIENT ACCEPTED : %d\n", new_socket);}
           
             //INFORM USER OF SOCKET NUMBER - USED IN SEND AND RECIEVE COMMAND
-            printf("NEW CONNECTION ON SOCKET FILE DESCRIPTOR %d \t IP %s \t PORT %d \n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
+            printf("FILE DESCRIPTOR %d IP %s PORT %d \n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
+        k
         
             // SEND WELCOME MESSAGE
             if( send(new_socket, message, strlen(message), 0) != strlen(message) ) 
@@ -158,7 +181,7 @@ int main(int argc , char *argv[])
                 {
                     // CLIENT DISCONNECTED
                     getpeername(sd , (struct sockaddr*)&address , (socklen_t*)&addrlen);
-                    printf("Host disconnected , ip %s , port %d \n" , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
+                    printf("HOST DISCONNECTED IP %s PORT %d \n" , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
                       
                     //CLOSE SOCKET AND MARK AS ZERO
                     close( sd );
@@ -176,3 +199,29 @@ int main(int argc , char *argv[])
       
     return 0;
 } 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
