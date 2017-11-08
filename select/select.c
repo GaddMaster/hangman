@@ -23,8 +23,11 @@ char *word [] = {
 struct Players{
 	int client_socket;
 	char word[30];
-	char guess[30];
+	char word_state[30];
+	int difficulty;
+	int guesses;
 	int sessionID;
+	int state;	// INACTIVE:1	DIFFICULTY:2	ACTIVE:3 
 };
  
 int main(int argc , char *argv[])
@@ -50,7 +53,7 @@ int main(int argc , char *argv[])
       
     fd_set master_set;
       
-    char * message = "WELCOME TO HANGMAN EXPRESS \r\n";
+    char message[1024];
     char * serverFull = "SERVER IS FULL - PLEASE TRY AGAIN LATER \r\n";
   
     for (i = 0; i < max_players; i++) players[i].client_socket = 0; //INITILISE ALL CLIENT SOCKETS TO ZERO
@@ -127,7 +130,7 @@ int main(int argc , char *argv[])
         activity = select( max_sd + 1 , &master_set , NULL , NULL , NULL); // CALL SELECT AND WAIT FOR ACTIVITY - NO TIMEOUT SELECTED SO INDEFINITE
     
     
-        if ((activity < 0) && (errno != EINTR)) printf("SELECT ERROR - FUCKED");
+        if ((activity < 0) && (errno != EINTR)) printf("SELECT ERROR - FUCKED\n");
         
           
           
@@ -139,20 +142,9 @@ int main(int argc , char *argv[])
             {
                 perror("ACCEPT ERROR");
                 exit(EXIT_FAILURE);
-            }else{printf("NEW CLIENT ACCEPTED : %d\n", new_socket);}
-          
-            //INFORM USER OF SOCKET NUMBER - USED IN SEND AND RECIEVE COMMAND
-            printf("FILE DESCRIPTOR %d IP %s PORT %d \n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
-
-            // SEND WELCOME MESSAGE
-            if( send(new_socket, message, strlen(message), 0) != strlen(message) ) 
-            {
-                perror("SEND ERROR");
-            }else{printf("SEND WELCOME MESSAGE TO SOCKET %d", new_socket);}
+            }else{printf("NEW PLAYER FD:%d IP:%s PORT:%d \n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));}
               
-            printf("WELCOME MESSAGE SENT\n");
-              
-            //ADD NEW SOCKET TO ARRAY OF SOCKETS IN PLAYER
+            //ADD NEW PLAYER - LOOP PLAYER MAX LIMIT
             for (i = 0; i < max_players; i++) 
             {
                 //IF WE FIND A EMPTY PLAYER POSITION
@@ -163,8 +155,9 @@ int main(int argc , char *argv[])
                     players[i].sessionID = rand() % 10000;
                     int unique = TRUE;
                     
+                    //CHECK IF SESSION ID IS UNIQUE 
                    	do
-                    {
+                   	{
 						for (int checker = 0; checker < max_players; checker++) 
 						{
 							if(players[i].sessionID == players[checker].sessionID) unique = FALSE;
@@ -172,9 +165,21 @@ int main(int argc , char *argv[])
 						
                     } while(!unique);
 				    
-                    printf("SESSION ID %d\n", players[i].sessionID);
+                    printf("SESSION ID %d HAS BEEN ESTABLISHED \n", players[i].sessionID);
                     
-                    break;
+					players[i].state = 1; // INACTIVE STATE
+					
+				    // SEND INITIAL MESSAGE - CHECK RETURN IS LENGTH OF STRING
+				    
+				    snprintf(buffer, sizeof(buffer), "%d", players[i].sessionID);
+				    
+				    
+				    if(send(new_socket, message, strlen(message), 0) != strlen(message) ) 
+				    {
+				        perror("SEND ERROR");
+				    }else{printf("SEND WELCOME MESSAGE TO SOCKET %d\n", new_socket);}
+				      
+				    printf("WELCOME MESSAGE SENT\n");
                 }
                 else
                 {
@@ -204,7 +209,7 @@ int main(int argc , char *argv[])
                 {
                     // CLIENT DISCONNECTED
                     getpeername(sd , (struct sockaddr*)&address , (socklen_t*)&addrlen);
-                    printf("HOST DISCONNECTED IP %s PORT %d \n" , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
+                    printf("PLAYER DISCONNECTED IP:%s PORT:%d \n" , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
                       
                     //CLOSE SOCKET AND MARK AS ZERO
                     close( sd );
@@ -226,8 +231,7 @@ int main(int argc , char *argv[])
 
 static char *rand_string(char *str, size_t size)
 {
-    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX0123456789led
-    ";
+    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX0123456789ledobviouso";
     if (size) {
         --size;
         for (size_t n = 0; n < size; n++) {
