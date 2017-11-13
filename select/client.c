@@ -17,15 +17,15 @@
 int main (int argc, char * argv [])
 {
 	int network_socket;
-	int client_socket;
+	//int client_socket;
 	
     char buffer[1024];
       
     //CREATE MAIN SOCKET
     if( (network_socket = socket(AF_INET , SOCK_STREAM , 0)) == 0){
-        perror("SOCKET ERROR");
+        perror("ERROR\tSOCKET ERROR");
         exit(EXIT_FAILURE);
-    }else{printf("SOCKET CREATED AT %d\n", network_socket);}
+    }else{printf("PASS\tSOCKET CREATED AT %d\n", network_socket);}
  
     struct sockaddr_in server_address;
     server_address.sin_family = AF_INET;
@@ -34,22 +34,26 @@ int main (int argc, char * argv [])
 	
     //CONNECT TO SERVER
     if (connect(network_socket, (struct sockaddr *)&server_address, sizeof(server_address))<0){
-        perror("BIND ERROR");
+        perror("ERROR\tBIND ERROR");
         exit(EXIT_FAILURE);
-    }else{printf("SOCKET BINDED TO ADDRESS\n");}
+    }else{printf("PASS\tCONNECTED TO NETWORK SOCKET ADDRESS %d\n", network_socket);}
 
 	struct sockaddr_in client_address;
 	int size = sizeof(struct sockaddr);
 	
-	if(recv(net_sock, buffer, sizeof(buffer), 0))
+	if(recv(network_socket, buffer, sizeof(buffer), 0))
 	{
-		
-	}
+		printf("ERROR\tRECIEVE ERROR\n");
+	}else{printf("PASS\tRESPONSE RECIEVED: %s\n", buffer);}
 
 	//GET MY MACNHINE NAME
 	int socket_name = getsockname(network_socket, (struct sockaddr * ) &client_address, &size);
     
-    sleep(10000);
+    printf("PASS\tCLOSING NETWORK SOCKET\n");
+    
+ 	close(network_socket);
+ 	
+ 	printf("PASS\tNETWORK SOCKET CLOSED\n");
     
     return 0;
     
