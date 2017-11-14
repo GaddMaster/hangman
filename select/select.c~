@@ -20,7 +20,7 @@ char *word [] = {
 #define FALSE  0
 #define PORT 8888
 
-struct Players{
+struct Player{
 	int ID;
 	int client_socket;
 	char word[30];
@@ -28,19 +28,22 @@ struct Players{
 	int difficulty;
 	int guesses;
 	int sessionID;
-	int state;	// INACTIVE:1	DIFFICULTY:2	ACTIVE:3 
+	int state;	// ENTRY:1	DIFFICULTY:2	ACTIVE:3 
 };
+
+void clear();
  
 int main(int argc , char *argv[])
 {
+	clear();
+
     int opt = TRUE;
     int serv_socket;
     int addrlen;
     int new_socket;
     
-    struct Players players[3];
-    int max_players = 3;
-    int max_guess = 10;
+    struct Player players[5];
+    int max_players = 5;
     
     int activity;
     int i;
@@ -51,6 +54,10 @@ int main(int argc , char *argv[])
     struct sockaddr_in address;
       
     char buffer[1024];
+    
+    char * sBUFFER;
+    
+    char gameStateValues[x]
       
     fd_set master_set;
       
@@ -111,6 +118,7 @@ int main(int argc , char *argv[])
      
     while(TRUE) 
     {
+    
         FD_ZERO(&master_set); // CLEAR MASTER SET
   
         //ADD MAIN SOCKET TO SET
@@ -142,82 +150,50 @@ int main(int argc , char *argv[])
         {
             if ((new_socket = accept(serv_socket, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0)
             {
-                perror("ERROR\tACCEPT ERROR");
+                perror("accept");
                 exit(EXIT_FAILURE);
-            }else{printf("PASS\tNEW PLAYER FD:%d IP:%s PORT:%d \n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));}
-              
-            //SEND WELCOME MESSAGE
-            if(send(new_socket, &welcome, strlen(welcome), 0) != strlen(welcome))
+            }else{printf("\n\nPASS\tNEW PLAYER FD:%d IP:%s PORT:%d \n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));}
+
+		    players[i].sessionID = rand() % 10000;
+		    int unique = TRUE;
+		    
+		    // CHECK IF SESSION ID IS UNIQUE 
+		   	do{for(int checker = 0; checker < max_players; checker++) 
+				{if(players[i].sessionID == players[checker].sessionID && players[i].ID != players[checker].ID) 
+					{unique = FALSE;}}
+		    }while(!unique);
+			
+		    printf("PASS\tSESSION ID %d HAS BEEN ESTABLISHED\n", players[i].sessionID);
+		    
+			players[i].state = 1; // ENTRY STATE
+		
+			// SEND INITIAL MESSAGE - CHECK RETURN IS LENGTH OF STRING
+			snprintf(buffer, sizeof(buffer), "%d %d", players[i].sessionID, players[i].state);
+			printf("PASS\tBUFFER:%s\n", buffer);
+
+            // SEND NEW SESSION ID AND INITIAL PLAYER ENTRY STATE
+            if( send(new_socket, buffer, strlen(buffer), 0) != strlen(buffer) ) 
             {
-            	perror("ERROR\tSEND WELCOME");
-            }else{printf("PASS\tSEND WELCOME\n");}
-              
-            //ADD NEW PLAYER - LOOP PLAYER MAX LIMIT
+                perror("send");
+            }else{printf("PASS\tNEW SESSION ID AND ENRTY STATE SEND\n");}
+		
+			
+            //add new socket to array of sockets
             for (i = 0; i < max_players; i++) 
             {
-                //IF WE FIND A EMPTY PLAYER POSITION
-                if( players[i].client_socket == 0 )
+                //if position is empty
+                if(  players[i].client_socket == 0 )
                 {
-                	//printf("PASS\tEMPTY PLAYER SLOT FOUND\n");//DEBUGGING
-                	
-                    players[i].client_socket = new_socket;
-                    
-                    players[i].sessionID = rand() % 10000;
-                    //int unique = TRUE;
-                    
-                    //printf("PASS\tINITIAL SESSION ID CREATED : %d\n", players[i].sessionID);//DEBUGGING
-                    
-                    //CHECK IF SESSION ID IS UNIQUE 
-                   	//do
-                   	//{
-						//for (int checker = 0; checker < max_players; checker++) 
-						//{
-							//if(players[i].sessionID == players[checker].sessionID && players[i].ID != players[checker].ID) 
-							//{
-								//unique = FALSE;
-								//printf("ERROR\tCOPY FOUND\n");//DEBUGGING
-								//printf("ERROR\tPLAYER:%d \t CHECKER:%d\n", players[i].sessionID, players[checker].sessionID);//DEBUGGING
-							//}
-						//}
-						
-						//printf("PASS\tCOPY NOT FOUND\n");//DEBUGGING
-						
-                    //} while(!unique);
-				    
-                   // printf("PASS\tSESSION ID %d HAS BEEN ESTABLISHED \n", players[i].sessionID);
-                    
-					players[i].state = 1; // INACTIVE STATE
-					
-				    // SEND INITIAL MESSAGE - CHECK RETURN IS LENGTH OF STRING
-				    
-				    snprintf(buffer, sizeof(buffer), "%d %d", players[i].sessionID, players[i].state);
-				    
-				    printf("PASS\tBUFFER:%s\n", buffer);
-				    
-				    
-				    //if(send(new_socket, buffer, strlen(buffer), 0) != strlen(buffer) ) 
-				    //{
-				        //perror("ERROR\tSEND ERROR\n");
-				    //}else{printf("PASS\tINITIAL MESSAGE SEND TO SOCKET %d\n", new_socket);}
-				      
-                }
-                else
-                {
-                	printf("PASS\tSERVER FULL - PLAYER REQUEST DENIED %d\n", players[i].client_socket);
-                	
-				    if( send(new_socket, serverFull, strlen(serverFull), 0) != strlen(serverFull) ) 
-				    {
-				        perror("ERROR\tSEND ERROR\n");
-				    }else{printf("PASS\tSEND SERVER FULL MESSAGE TO SOCKET %d\n", new_socket);}
-                		
+                     players[i].client_socket = new_socket;
+                    printf("PASS\tADDED PLAYER %d TO PLAYER LIST POSITION%d\n" , new_socket, i);
+                     
+                    break;
                 }
             }
         }
         /////////////////////////////////////////////////////////////////////////////////
         
-        
-          
-        //IO OPERATION ON ANOTHER SOCKET
+        //IO GAME OPERATIONS
         for (i = 0; i < max_players; i++) 
         {
             sd = players[i].client_socket;
@@ -229,20 +205,32 @@ int main(int argc , char *argv[])
                 {
                     // CLIENT DISCONNECTED
                     getpeername(sd , (struct sockaddr*)&address , (socklen_t*)&addrlen);
-                    printf("PLAYER DISCONNECTED IP:%s PORT:%d \n" , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
+                    printf("PASS\tPLAYER DISCONNECTED IP:%s PORT:%d \n" , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
                       
                     //CLOSE SOCKET AND MARK AS ZERO
                     close( sd );
                     players[i].client_socket = 0;
                 }
-                else//ECHO MESSAGE TO CLIENT
+                else
                 {
-                    //SET STRING TERMINATING BYTE AT END
+                	int type = 0;
+                	
+					fscanf(valread, "%d %d %d", players[i].sessionID, type, players[i].difficulty);
+					
                     buffer[valread] = '\0';
+                    
                     send(sd , buffer , strlen(buffer) , 0 );
+                    
                 }
             }
         }
+        ////////////////////////////////////////////////////////////////////////////////
+        //RECIEVE PROTOCOL 0 - SESSION ID - REQUEST WORD - DIFFICULTY
+        //PROTOCOL 1 - SESSION ID - GUESSING - CHARACTER
+        
+        //SEND PROTOCOL 0 - SESSION ID - WORD - WORD STATE - GAME STATE
+        //SEND PROTOCOL 1 - SESSION ID - WORD - WORD STATE - GAME STATE
+        
     }
       
     return 0;
@@ -264,9 +252,10 @@ static char *rand_string(char *str, size_t size)
 }
 
 
-
-
-
+void clear()
+{
+	system("@cls||clear");
+}
 
 
 
