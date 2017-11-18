@@ -1,14 +1,23 @@
 /*
  * ------------------------------------------------------
  	Team1: 	Sean Horgan - 		K00196030
-		Daniel Gadd - 		
+		Daniel Gadd - 		K00202350
 		Samuel McSweeny - 	
- 	str_cli.c
+ 	
+	Name:	str_cli.c
+
  	Description:
 		Infinite loop that handles I/O 
 		to and from the server until
 		the game ends or connection
 		terminates.
+		
+		Uses select() to block until
+		a file descriptor is read for
+		reading or writing.
+	
+	Compile:
+		gcc -o cli TCPClient.c str_cli.c
  * ------------------------------------------------------
  */
 
@@ -18,18 +27,16 @@
    {
 	int maxfdp1, stdineof;
 	fd_set rset;
-	//char sendline[MAXLINE], recvline[MAXLINE];
 	char buf[MAXLINE];
 	int n;
 
-// fp - bit corresponding to standard I/O file pointer
-// sockfd - bit corresponding to socket
+	/* fp - bit corresponding to standard I/O file pointer */
 	stdineof = 0;
 	FD_ZERO(&rset);
 	for ( ; ; ) {
 	   if(stdineof == 0)	   
 		FD_SET(fileno (fp), & rset);
-	   FD_SET(sockfd, & rset);
+	   FD_SET(sockfd, & rset); /* sockfd - bit corresponding to socket */
 	   
 	   /* fileno: convert I/O file pointer to corresponding descriptor */
 	   /* max: calculate the maximum of the two descriptors */
@@ -40,30 +47,24 @@
 	   select(maxfdp1, &rset, NULL, NULL, NULL);
 
 	   /* If the socket is readble upon return from select() the echoed
-	      line is read and output by write */
+	      line is read and output by write, if read contains 0 bytes
+	      then that is an eof and the connection will terminate */
 	   if (FD_ISSET(sockfd, &rset)) { /* socket is readable */
-	      if( (n = read(sockfd, buf, MAXLINE)) == 0) {
-  	         if(stdineof == 1)
-		    return;
-		 else
-	            error("str_cli: Server terminated prematurely");
-	      }
-	      write(fileno(stdout), buf, n);
+	      if( (n = read(sockfd, buf, MAXLINE)) == 0)
+  	         return;
+	      write(fileno(stdout), buf, n); /* Write output to console */
 	   }
 
-	   /* if the input is readable copy it to the outgoing buffer
+	   /* If the input is readable copy it to the outgoing buffer
 	      then write it to the server socket */
 	   if (FD_ISSET(fileno (fp), &rset)) { /* input is readable */
 	      if( (n = read(fileno(fp), buf, MAXLINE)) == 0) {
-		 stdineof = 1;
-		 shutdown(sockfd, SHUT_WR); /* send FIN */
-	    	 FD_CLR(fileno (fp), &rset);
 		 continue;
 	      }
-	      write(sockfd, buf, n);
+	      write(sockfd, buf, n);	/* Write contents of buffer to server */
 	   }
-       }
-   }
+       }// end for
+   }// end str_cli()
 
 /* -- REPLACE ABOVE CODE WITH BELOW CODE FOR NON-SELECT I/O -- */
 

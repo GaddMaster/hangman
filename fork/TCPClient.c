@@ -1,14 +1,18 @@
 /*
- * ------------------------------------------------------
+ * -----------------------------------------------------------------------------
  	Team1: 	Sean Horgan - 		K00196030
-		Daniel Gadd - 		
+		Daniel Gadd - 		K00202350
 		Samuel McSweeny - 	
- 	TCPClient.c
+
+ 	Name: 	TCPClient.c
+
  	Description:
 		Creates a connecting socket. Connects
 		to server and calls str_cli to handle
 		I/O to and drom the server.
- * ------------------------------------------------------
+
+	Compile: gcc -o cli TCPClient.c str_cli.c
+ * -----------------------------------------------------------------------------
  */
 
 #include "AddedStuff.h"
