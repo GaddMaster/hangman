@@ -1,27 +1,24 @@
 /*
- * -----------------------------------------------------------------------------
+ * ------------------------------------------------------
  	Team1: 	Sean Horgan - 		K00196030
-		Daniel Gadd - 		K00202350
+		Daniel Gadd - 		
 		Samuel McSweeny - 	
- 	
-	Name: 	run_process.c
-
+ 	run_process.c
  	Description:
 		Container for Hangman code. Called by
 		the server after fork(). Handles I/O
 		to and from the client.
-	
-	Compile: 
-		gcc -o srv ForkingServer.c run_process.c ServerUtility.c
- * -----------------------------------------------------------------------------
+ * ------------------------------------------------------
  */
 
  # include "AddedStuff.h"
 
  extern time_t time ();	/* For seeding RNG */
+
  int maxlives = 12;	/* Stores the maximum number of lives for Player*/
+ 
  char *word [] = {	/* Array to store the words from 'words' text file */
-     # include "../words"
+     # include "words"
  };
 
  /* -- Contains all the hangman functionality -- */
@@ -52,7 +49,7 @@
  	
 	part_word[i] = '\0';
 
-	sprintf (outbuf, "WORD: %s LIVES: %d \n", part_word, lives);
+	sprintf (outbuf, "%s %d \n", part_word, lives);
  	write (out, outbuf, strlen(outbuf));
 
 	/* -- Main loop for guesses and win/lose logic -- */
@@ -82,6 +79,7 @@
  			game_state = 'W';               /* W ==> User Won */
 			sprintf(outbuf, "Congratulations, You Win!\n");
 			write(out,  outbuf, strlen(outbuf));
+			close(out);			/* Close socket */
 		}
 
  		else if (lives == 0) {
@@ -92,7 +90,7 @@
  		}
 
 		/* Copy part_word and lives to outgoing buffer */
- 		sprintf (outbuf, "WORD: %s LIVES: %d \n", part_word, lives);
+ 		sprintf (outbuf, "%s %d \n", part_word, lives);
  		write (out, outbuf, strlen(outbuf));  /* Write to client sock */
  	} // end while
  }

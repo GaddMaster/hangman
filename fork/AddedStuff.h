@@ -37,6 +37,8 @@
 
  # define max(a,b) ((a) > (b) ? (a) : (b))
 
+void	 Shutdown(int, int);
+
  int run_process(int, int);	/* definition for hangman function */
 
  void error (char *msg);	/* definitoin for perror wrapper */

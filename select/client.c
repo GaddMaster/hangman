@@ -1,71 +1,273 @@
-#include	<sys/types.h>
-#include	<sys/socket.h>
-#include	<sys/time.h>
-#include	<time.h>
-#include	<netinet/in.h>
-#include	<arpa/inet.h>
-#include	<errno.h>
-#include	<fcntl.h>
-#include	<netdb.h>
-#include	<signal.h>
-#include	<stdio.h>
-#include	<stdlib.h>
-#include	<string.h>
-#include	<sys/stat.h>
-#include	<sys/uio.h>
-#include	<unistd.h>
-#include	<sys/wait.h>
-#include	<sys/un.h>		
-#include	<sys/select.h>	
-#include	<sys/sysctl.h>
-#include	<poll.h>
-#include	<strings.h>
-#include	<sys/ioctl.h>
-#include	<pthread.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/time.h>
 
- int main (int argc, char * argv [])
- {
- 	int cli_sock;
- 	char * server_name;
+#define TRUE   1
+#define FALSE  0
+#define PORT 8888
+#define IP 127.0.0.1
+#define VALUECOUNT 2
+#define LINESIZE 80
 
-	struct hostent * host_info;
- 	struct sockaddr_in server_addr; // SERVER ADDRESS
+struct Player{
+	int ID;
+	int client_socket;
+	char word[30];
+	char word_state[30];
+	int difficulty;
+	int guesses;
+	int sessionID;
+	int gameState;	// ACTIVE:1	GAME OVER:0
+};
 
- 	// GET SERVER NAME FROM COMMAND LINE ELSE USE LOCALHOST
- 	server_name = (argc = 1)?  argv [1]: "localhost";
+void printHangMan(char word[30], char wordState[30], int guesses);
 
- 	// CREATE A SOCKET
- 	cli_sock = socket(AF_INET, SOCK_STREAM, 0);
- 	if (cli_sock <0) {
- 		perror ("Creating stream socket");
- 		exit (1);
- 	}
+void clear();
 
- 	host_info = gethostbyname(server_name);
- 	if (host_info == NULL) {
- 		//fprintf (stderr, "%s: unknown host:%s \ n", argv [0], server_name);
- 		exit (2);
- 	}
+int main (int argc, char * argv [])
+{
+	clear();
 
-
- 	// SET UP SERVER SOCKET ADDRESS AND CONNECT
- 	server_addr.sin_family = host_info->h_addrtype;
- 	memcpy ((char *) & server_addr.sin_addr, host_info->h_addr, host_info->h_length);
- 	server_addr.sin_port = htons (1000);
-
- 	if (connect(cli_sock, (struct sockaddr *) & server_addr, sizeof server_addr) <0) {
- 		perror ("connecting to server");
- 		exit (3);
- 	}
- 	
-
- 	printf("Connected to server : %s \n", server_name);
- 	
- 	char * message = "Hello Server\n";
- 	
-	send(cli_sock, message, sizeof(message), 0);
+	int network_socket;
+	//int client_socket;
 	
-	close(cli_sock);
+    char BUFFER[1024]; // PROTOCOL - SESSION ID - TYPE - FULL WORD - WORD STATE - GAME STATE
+    
+    char * string;
+    
+ 	 char i_line[LINESIZE];
+ 	 char o_line[LINESIZE];
+ 	 int gameStateValues[VALUECOUNT];
+ 	 
+ 	 struct Player player;
+      
+    //CREATE MAIN SOCKET
+    if( (network_socket = socket(AF_INET , SOCK_STREAM , 0)) == 0){
+        perror("ERROR\tSOCKET ERROR");
+        exit(EXIT_FAILURE);
+    }else{printf("PASS\tSOCKET CREATED AT %d\n", network_socket);}
+ 
+    struct sockaddr_in server_address;
+    server_address.sin_family = AF_INET;
+    server_address.sin_addr.s_addr = INADDR_ANY;
+    server_address.sin_port = htons(PORT);
 	
-	return 0;
- }
+    //CONNECT TO SERVER
+    if (connect(network_socket, (struct sockaddr *)&server_address, sizeof(server_address))<0){
+        perror("ERROR\tBIND ERROR");
+        exit(EXIT_FAILURE);
+    }else{printf("PASS\tCONNECTED TO NETWORK SOCKET ADDRESS %d\n", network_socket);}
+
+	struct sockaddr_in client_address;
+	int size = sizeof(struct sockaddr);
+	
+	if(recv(network_socket, BUFFER, 1024, 0) < 0)
+	{
+		printf("ERROR\tRECIEVE ERROR\n");
+	}else{printf("PASS\tRESPONSE RECIEVED: %s\n", BUFFER);}
+
+	//GET MY MACNHINE NAME
+	int socket_name = getsockname(network_socket, (struct sockaddr * ) &client_address, &size);
+	
+	string = strtok(BUFFER, " ");
+	
+	for(int x = 0; x < VALUECOUNT; x++){
+		gameStateValues[x] = atoi(string);
+		string = strtok(NULL, " ");
+		printf("\tGAME STATE VALUE %d\n", gameStateValues[x]);
+	}
+	
+	player.sessionID = gameStateValues[0];
+
+	printf("\tENTER SESSION ID OR -NEW- FOR NEW GAME\n");
+	
+	char input[30];
+	
+	fgets(input, sizeof(input), stdin);
+	
+	printf("\tYOUR INPUT : %s", input);
+	
+	if(strcmp(input, "NEW"))
+	{
+		printf("\tNEW GAME SELECTED\n");
+		printf("\tPICK DIFFICULTY - 1, 2 OR 3\n");
+		fgets(input, sizeof(input), stdin);
+		
+		printf("\tDIFFICULTY SELECTED : %s\n", input);
+		player.gameState = 1;
+		player.difficulty = atoi(input);
+		
+		// CREATE REQUEST FOR WORD STRING
+		snprintf(BUFFER, sizeof(BUFFER), "%d 0 %D 0", player.sessionID, player.difficulty);
+		printf("PASS\tBUFFER:%s\n", BUFFER);
+		
+		// SEND SERVER REQUEST FOR WORD
+		if( send(network_socket, BUFFER, strlen(BUFFER), 0) != strlen(BUFFER) ) 
+		{perror("ERROR\tSEND ERROR\n");
+		}else{printf("PASS\tREQUEST FOR WORD SENT\n");}
+	}
+	else
+	{
+		//REQUEST TO CONTINUE INITIALISE OLD GAME
+		printf("\tTRYING TO RE-INITIALISE OLD GAME\n");
+		//PENDING CODE
+	}
+	
+	//	GAME ZONE
+	while(player.gameState != 4)
+	{
+		
+	}
+	
+	
+	
+	sleep(1000);
+    
+    printf("PASS\tCLOSING NETWORK SOCKET\n");
+    
+ 	close(network_socket);
+ 	
+ 	printf("PASS\tNETWORK SOCKET CLOSED\n");
+    
+    return 0;
+
+}
+
+void clear()
+{
+	system("@cls||clear");
+}
+
+int printHangman(char word[30], char wordState[30], int guesses)
+{
+	clear(); // CLEAR CONSOLE FOR NEW STATE TO BE DISPLAYED
+	
+	int gameOver = 0;
+	
+	printf("\tHANGMAN EXPRESS");
+	
+	switch(guesses){
+		case 0:
+			printf("\t--------------------\n");
+			printf("\t|               |   \n");
+			printf("\t|               O   \n");
+			printf("\t|              -I-  \n");
+			printf("\t|               |   \n");
+			printf("\t|               ^   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t--------------------\n");
+			gameOver = TRUE;
+			break;
+		case 1:
+			printf("\t--------------------\n");
+			printf("\t|               |   \n");
+			printf("\t|               O   \n");
+			printf("\t|              -I-  \n");
+			printf("\t|               |   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t--------------------\n");
+			gameOver = FALSE;
+			break;
+		case 2:
+			printf("\t--------------------\n");
+			printf("\t|               |   \n");
+			printf("\t|               O   \n");
+			printf("\t|              -I-  \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t--------------------\n");
+			gameOver = FALSE;
+			break;
+		case 3:
+			printf("\t--------------------\n");
+			printf("\t|               |   \n");
+			printf("\t|               O   \n");
+			printf("\t|              -I   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t--------------------\n");
+			gameOver = FALSE;
+			break;
+		case 4:
+			printf("\t--------------------\n");
+			printf("\t|               |   \n");
+			printf("\t|               O   \n");
+			printf("\t|               I   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t--------------------\n");
+			gameOver = FALSE;
+			break;
+		case 5:
+			printf("\t--------------------\n");
+			printf("\t|               |   \n");
+			printf("\t|               O   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t--------------------\n");
+			gameOver = FALSE;
+			break;
+		case 6:
+			printf("\t--------------------\n");
+			printf("\t|               |   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t--------------------\n");
+			gameOver = FALSE;
+			break;
+		case 7:
+			printf("\t--------------------\n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t--------------------\n");
+			gameOver = FALSE;
+			break;
+		default:
+			printf("\t--------------------\n");
+			printf("\t|               |   \n");
+			printf("\t|               O   \n");
+			printf("\t|              -I-  \n");
+			printf("\t|               |   \n");
+			printf("\t|               ^   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t--------------------\n");
+			gameOver = TRUE;
+			break;
+	}
+	
+	printf("\t%s", wordState);
+	
+	printf("\tGUESS LETTER\n\n");
+	
+	return gameOver;
+}
+
