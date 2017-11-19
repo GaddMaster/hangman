@@ -1,31 +1,87 @@
 /*
- * -----------------------------------------------------------------------------
- 	Team1: 	Sean Horgan - 		K00196030
-		Daniel Gadd - 		K00202350
-		Samuel McSweeny - 	K00200955
- 	
-	Name: 	run_process.c
-
- 	Description:
-		Container for Hangman code. Called by
-		the server after fork(). Handles I/O
-		to and from the client.
-	
-	Compile: 
-		gcc -o srv ForkingServer.c run_process.c ServerUtility.c
- * -----------------------------------------------------------------------------
+ * UDP Hangman Server
+ * Need to Tidy Up
+ * Add ability to choose to play or leave etc..
  */
 
- # include "AddedStuff.h"
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
+//#include "run_process.h"
+#include "AddedStuff.h"
 
- extern time_t time ();	/* For seeding RNG */
- int maxlives = 12;	/* Stores the maximum number of lives for Player*/
- char *word [] = {	/* Array to store the words from 'words' text file */
-     # include "../words"
- };
+#define PORT 8888
+
+struct sockaddr_in servadder, cliaddr;
+
+int clientlen = sizeof(cliaddr);
+
+extern time_t time ();	/* For seeding RNG */
+int maxlives = 12;	/* Stores the maximum number of lives for Player*/
+char *word [] = 
+{	
+     /* Array to store the words from 'words' text file */
+     # include "words"
+};
+
+
+int main(void) 
+{
+	int sockfd;
+	int i;
+	int bytes;
+	char buffer[1024];
+	char response [3];
+
+	if ((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) 
+	{
+		perror("Socket Creation Has Failed");
+	}
+
+	memset((char *) &servadder, 0, sizeof(servadder));
+
+	servadder.sin_family = AF_INET;
+	servadder.sin_addr.s_addr = htonl(INADDR_ANY);
+	servadder.sin_port = htons(PORT);
+
+	if (bind(sockfd, (struct sockaddr *) &servadder, sizeof(servadder)) == -1) 
+	{	
+		perror("Binding The Socket Has Failed");
+	}
+
+	// 	
+
+	while(1)
+	{
+		fflush(stdout);
+
+		if((bytes = recvfrom(sockfd, buffer, 1024, 0, (struct sockaddr *) &cliaddr, &clientlen)) == -1)
+		{
+			perror("recvfrom() Has Failed");
+		}
+		
+		if (sendto(sockfd, buffer, strlen(buffer), 0, (struct sockaddr *) &cliaddr, clientlen) == -1) 
+		{
+			perror("sendto() Has Failed");
+		}
+
+		run_process(sockfd, sockfd);
+			
+	}
+
+	close(sockfd);
+
+	return 0;
+}
 
  /* -- Contains all the hangman functionality -- */
- int run_process(int in, int out) {
+int run_process(int in, int out)
+{
 
  	int lives = maxlives;			/* Max number of player lives */
  	int game_state = 'I';			/* I = Incomplete */
@@ -35,9 +91,9 @@
  	guess[MAXLEN], outbuf [MAXLEN];
 
 	/* -- Print to client that they are playing hangman on my machine -- */ 	
-	gethostname (hostname, MAXLEN);		/* i.e. sean-Virtualbox */
+	gethostname (hostname, MAXLEN);		
  	sprintf(outbuf, "Playing hangman on host %s:\n", hostname);
- 	write(out, outbuf, strlen(outbuf));
+ 	sendto (out, outbuf, strlen(outbuf), 0, (struct sockaddr *) &cliaddr, sizeof cliaddr);
 	
 
  	/* -- Pick a word at random from the list -- */
@@ -53,13 +109,13 @@
 	part_word[i] = '\0';
 
 	sprintf (outbuf, "WORD: %s LIVES: %d \n", part_word, lives);
- 	write (out, outbuf, strlen(outbuf));
+ 	sendto (out, outbuf, strlen(outbuf), 0, (struct sockaddr *) &cliaddr, sizeof cliaddr);
 
 	/* -- Main loop for guesses and win/lose logic -- */
  	while (game_state == 'I')
  	{
 		/* -- Get a letter from player guess -- */
-		while (read (in, guess, MAXLEN) <0) {
+		while (recvfrom(in, guess, MAXLEN, 0, (struct sockaddr *) &cliaddr, &clientlen) <0) {
  			if (errno != EINTR)
  				exit (4);
  			printf ("re-read the startin \n");
@@ -81,7 +137,7 @@
  		if (strcmp (whole_word, part_word) == 0){
  			game_state = 'W';               /* W ==> User Won */
 			sprintf(outbuf, "Congratulations, You Win!\n");
-			write(out,  outbuf, strlen(outbuf));
+			sendto (out, outbuf, strlen(outbuf), 0, (struct sockaddr *) &cliaddr, sizeof cliaddr);
 		}
 
  		else if (lives == 0) {
@@ -93,6 +149,6 @@
 
 		/* Copy part_word and lives to outgoing buffer */
  		sprintf (outbuf, "WORD: %s LIVES: %d \n", part_word, lives);
- 		write (out, outbuf, strlen(outbuf));  /* Write to client sock */
+ 		sendto (out, outbuf, strlen(outbuf), 0, (struct sockaddr *) &cliaddr, sizeof cliaddr);  /* Write to client sock */
  	} // end while
- }
+}
