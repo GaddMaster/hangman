@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
@@ -12,23 +13,26 @@
 #include <netinet/in.h>
 #include <sys/time.h>
 
-char *word [] = {
+char * word [] = {
      # include "../words"
  };
   
 #define TRUE   1
 #define FALSE  0
 #define PORT 8888
+#define NUMWORDS 10
+#define VALUECOUNT 2
 
 struct Player{
 	int ID;
 	int client_socket;
-	char word[30];
+	char * word;
+	int wordLength;
 	char word_state[30];
 	int difficulty;
 	int guesses;
 	int sessionID;
-	int state;	// ENTRY:1	DIFFICULTY:2	ACTIVE:3 
+	int state;	// GAME OVER:0	ACTIVE:1 
 };
 
 void clear();
@@ -57,7 +61,7 @@ int main(int argc , char *argv[])
     
     char * sBUFFER;
     
-    char gameStateValues[x]
+    char gameStateValues[2];
       
     fd_set master_set;
       
@@ -66,16 +70,8 @@ int main(int argc , char *argv[])
     char * serverFull = "SERVER IS FULL - PLEASE TRY AGAIN LATER \r\n";
   
     for (i = 0; i < max_players; i++) {players[i].client_socket = 0;players[i].ID == i;} //INITILISE ALL CLIENT SOCKETS TO ZERO
-    
- 	// PICK RANDOM WORD FROM OUR LIST
-	//srand(time(NULL));
- 	//whole_word = word[rand() % NUM_OF_WORDS];git pull origin master
 
- 	//word_length = strlen(whole_word);
- 	//for (i = 0; i <word_length; i++) part_word[i]='-';
-	//part_word[i] = '\0';
-      
-      
+
     //CREATE MAIN SOCKET
     if( (serv_socket = socket(AF_INET , SOCK_STREAM , 0)) == 0){
         perror("ERROR\tSOCKET ERROR");
@@ -149,39 +145,19 @@ int main(int argc , char *argv[])
         if (FD_ISSET(serv_socket, &master_set)) 
         {
             if ((new_socket = accept(serv_socket, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0)
-            {
-                perror("accept");
-                exit(EXIT_FAILURE);
+            {perror("accept");exit(EXIT_FAILURE);
             }else{printf("\n\nPASS\tNEW PLAYER FD:%d IP:%s PORT:%d \n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));}
 
-		    players[i].sessionID = rand() % 10000;
-		    int unique = TRUE;
-		    
-		    // CHECK IF SESSION ID IS UNIQUE 
-		   	do{for(int checker = 0; checker < max_players; checker++) 
-				{if(players[i].sessionID == players[checker].sessionID && players[i].ID != players[checker].ID) 
-					{unique = FALSE;}}
-		    }while(!unique);
-			
-		    printf("PASS\tSESSION ID %d HAS BEEN ESTABLISHED\n", players[i].sessionID);
-		    
-			players[i].state = 1; // ENTRY STATE
-		
-			// SEND INITIAL MESSAGE - CHECK RETURN IS LENGTH OF STRING
-			snprintf(buffer, sizeof(buffer), "%d %d", players[i].sessionID, players[i].state);
-			printf("PASS\tBUFFER:%s\n", buffer);
-
-            // SEND NEW SESSION ID AND INITIAL PLAYER ENTRY STATE
-            if( send(new_socket, buffer, strlen(buffer), 0) != strlen(buffer) ) 
-            {
-                perror("send");
-            }else{printf("PASS\tNEW SESSION ID AND ENRTY STATE SEND\n");}
+            // SEND WELCOME MESSAGE
+            if( send(new_socket, welcome, strlen(welcome), 0) != strlen(welcome) ) 
+            {perror("send");
+            }else{printf("PASS\tWELCOME MESSAGE SENT\n");}
 		
 			
-            //add new socket to array of sockets
+            //ADD NEW PLAYER TO LIST OF PLAYERS
             for (i = 0; i < max_players; i++) 
             {
-                //if position is empty
+                //FIND EMTPY POSITION
                 if(  players[i].client_socket == 0 )
                 {
                      players[i].client_socket = new_socket;
@@ -193,10 +169,10 @@ int main(int argc , char *argv[])
         }
         /////////////////////////////////////////////////////////////////////////////////
         
-        //IO GAME OPERATIONS
+        
         for (i = 0; i < max_players; i++) 
         {
-            sd = players[i].client_socket;
+             sd = players[i].client_socket;
               
             if (FD_ISSET( sd , &master_set)) 
             {
@@ -205,7 +181,7 @@ int main(int argc , char *argv[])
                 {
                     // CLIENT DISCONNECTED
                     getpeername(sd , (struct sockaddr*)&address , (socklen_t*)&addrlen);
-                    printf("PASS\tPLAYER DISCONNECTED IP:%s PORT:%d \n" , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
+                    printf("Host disconnected , ip %s , port %d \n" , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
                       
                     //CLOSE SOCKET AND MARK AS ZERO
                     close( sd );
@@ -213,31 +189,18 @@ int main(int argc , char *argv[])
                 }
                 else
                 {
-                	int type = 0;
-                	
-					fscanf(valread, "%d %d %d", players[i].sessionID, type, players[i].difficulty);
-					
-                    buffer[valread] = '\0';
-                    
-                    send(sd , buffer , strlen(buffer) , 0 );
-                    
+                    //snprintf(buffer, sizeof(buffer), "%s %d %d", players[i].word_state, players[i].guesses, players[i].difficulty);
+                    //send(sd , buffer , strlen(buffer) , 0 );
                 }
             }
         }
-        ////////////////////////////////////////////////////////////////////////////////
-        //RECIEVE PROTOCOL 0 - SESSION ID - REQUEST WORD - DIFFICULTY
-        //PROTOCOL 1 - SESSION ID - GUESSING - CHARACTER
-        
-        //SEND PROTOCOL 0 - SESSION ID - WORD - WORD STATE - GAME STATE
-        //SEND PROTOCOL 1 - SESSION ID - WORD - WORD STATE - GAME STATE
-        
     }
       
     return 0;
 } 
 
 
-static char *rand_string(char *str, size_t size)
+static char * rand_string(char *str, size_t size)
 {
     const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX0123456789ledobviouso";
     if (size) {
@@ -260,13 +223,52 @@ void clear()
 
 
 
-
-
-
-
-
-
-
+                   	/*
+                	int type = 0;
+                	
+					printf("BUFFER:,%s\n", buffer);
+					
+					players[i].difficulty = 1;
+	
+					if(type = 0){
+						printf("PASS\tNEW GAME REQUEST\n");
+						players[i].sessionID = rand() % 10000;
+						int unique = TRUE;
+			
+						// CHECK IF SESSION ID IS UNIQUE 
+					   	do{for(int checker = 0; checker < max_players; checker++) 
+							{if(players[i].sessionID == players[checker].sessionID && players[i].ID != players[checker].ID) 
+								{unique = FALSE;}}
+						}while(!unique);
+		
+						printf("PASS\tSESSION ID %d HAS BEEN ESTABLISHED\n", players[i].sessionID);
+			
+						
+					 	// PICK RANDOM WORD FROM OUR LIST
+						int seed = time(NULL);
+						srand(seed);
+					 	//players[i].word = word[rand() % NUMWORDS];
+					 	players[i].word = "MyWording";
+					 	players[i].wordLength = strlen(players[i].word);
+					 	for (i = 0; i < players[i].wordLength; i++) players[i].word_state[i]='-';
+						players[i].state = 1; // ACTIVE STATE
+						
+						switch(players[i].difficulty){
+							case 1: players[i].guesses = 6;break;
+							case 2: players[i].guesses = 5;break;
+							case 3: players[i].guesses = 4;break;
+							default: players[i].guesses = 6;break;
+						}
+						
+						// PREPARE PLAYER GUESS REQUEST
+						snprintf(buffer, sizeof(buffer) - 2, "%s %d %d", players[i].word_state, players[i].guesses, players[i].difficulty);
+						printf("PASS\tBUFFER:%s\n", buffer);
+						
+                     	buffer[sizeof(buffer)-2] = '\0';
+                    	send(sd , buffer , strlen(buffer) , 0 );
+                    }
+                    */
+                
 
 
 

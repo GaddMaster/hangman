@@ -78,15 +78,14 @@ int main (int argc, char * argv [])
 	
 	string = strtok(BUFFER, " ");
 	
-	for(int x = 0; x < VALUECOUNT; x++){
-		gameStateValues[x] = atoi(string);
-		string = strtok(NULL, " ");
-		printf("\tGAME STATE VALUE %d\n", gameStateValues[x]);
-	}
+	//for(int x = 0; x < VALUECOUNT; x++){
+		//gameStateValues[x] = atoi(string);
+		//string = strtok(NULL, " ");
+		//printf("\tGAME STATE VALUE %d\n", gameStateValues[x]);}
 	
-	player.sessionID = gameStateValues[0];
+	//player.sessionID = gameStateValues[0];
 
-	printf("\tENTER SESSION ID OR -NEW- FOR NEW GAME\n");
+	printf("\tENTER SESSION ID OR -ZERO- FOR NEW GAME\n");
 	
 	char input[30];
 	
@@ -105,19 +104,34 @@ int main (int argc, char * argv [])
 		player.difficulty = atoi(input);
 		
 		// CREATE REQUEST FOR WORD STRING
-		snprintf(BUFFER, sizeof(BUFFER), "%d 0 %D 0", player.sessionID, player.difficulty);
+		snprintf(BUFFER, sizeof(BUFFER), "0 %d", player.difficulty);
 		printf("PASS\tBUFFER:%s\n", BUFFER);
 		
 		// SEND SERVER REQUEST FOR WORD
 		if( send(network_socket, BUFFER, strlen(BUFFER), 0) != strlen(BUFFER) ) 
 		{perror("ERROR\tSEND ERROR\n");
 		}else{printf("PASS\tREQUEST FOR WORD SENT\n");}
+		
+		if(recv(network_socket, BUFFER, 1024, 0) < 0)
+		{
+			printf("ERROR\tRECIEVE ERROR\n");
+		}else{printf("PASS\tRESPONSE RECIEVED: %s\n", BUFFER);}
 	}
 	else
 	{
 		//REQUEST TO CONTINUE INITIALISE OLD GAME
 		printf("\tTRYING TO RE-INITIALISE OLD GAME\n");
 		//PENDING CODE
+		
+		// CREATE REQUEST FOR WORD STRING
+		snprintf(BUFFER, sizeof(BUFFER), "%d %d", player.sessionID, player.difficulty);
+		printf("PASS\tBUFFER:%s\n", BUFFER);
+		
+		// SEND SERVER REQUEST FOR WORD
+		if( send(network_socket, BUFFER, strlen(BUFFER), 0) != strlen(BUFFER) ) 
+		{perror("ERROR\tSEND ERROR\n");
+		}else{printf("PASS\tREQUEST TO CONTINUE SESSION SENT\n");}
+		
 	}
 	
 	//	GAME ZONE
