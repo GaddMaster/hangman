@@ -1,16 +1,21 @@
 /*
- * ------------------------------------------------------
+ * -----------------------------------------------------------------------------
  	Team1: 	Sean Horgan - 		K00196030
-		Daniel Gadd - 		
+		Daniel Gadd - 		K00202350
 		Samuel McSweeny - 	
- 	ServerUtility.c
- 	Description:
+ 	
+	Name:	ServerUtility.c
+ 	
+	Description:
 		Used to store functions used by the
 		server.
 		- error: a wrapper of perror
 		- sigchld_handler: reaps zombies
-		- get_in_addr: get IPv4 or IPv6 address 
- * ------------------------------------------------------
+		- get_in_addr: get IPv4 or IPv6 address
+
+	Compile: 
+		gcc -o srv ForkingServer.c run_process.c ServerUtility.c
+ * -----------------------------------------------------------------------------
  */
 
  #include "AddedStuff.h"

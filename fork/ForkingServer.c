@@ -1,17 +1,21 @@
 /*
- * ------------------------------------------------------
+ * -----------------------------------------------------------------------------
  	Team1: 	Sean Horgan - 		K00196030
-		Daniel Gadd - 		
-		Samuel McSweeny - 	
- 	ForkingServer.c
+		Daniel Gadd - 		K00202350
+		Samuel McSweeny - 	K00200955
+ 	
+	Name:	ForkingServer.c
+
  	Description:
 		Creates a listeing socket. Accepts
-		incoming connections form client.
-		Once connection is accepted, fork.
+		incoming connections from client.
+		Once connection is accepted, fork().
 		Once forked, play Hangman by calling
-		run_process function in run_process.c.
-	Compile: gcc -o srv ForkingServer.c run_process.c ServerUtility.c
- * ------------------------------------------------------
+		run_process() function in run_process.c.
+
+	Compile: 
+		gcc -o srv ForkingServer.c run_process.c ServerUtility.c
+ * -----------------------------------------------------------------------------
  */
 
  # include "AddedStuff.h"
@@ -20,7 +24,7 @@
  {
 	struct addrinfo hints, *servinfo, *p;	/* Used with getaddrinfo */
 	struct sockaddr_in cliaddr, servaddr;	/* Store cli and srv address */
-	struct sigaction sa;	
+	struct sigaction sa;			/* For signal handling */
 	int listenfd, connfd; 		/* listening and connection socket */
 	int clntPort;
 	int rv;

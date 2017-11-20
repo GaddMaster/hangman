@@ -21,7 +21,7 @@
  extern time_t time ();	/* For seeding RNG */
  int maxlives = 12;	/* Stores the maximum number of lives for Player*/
  char *word [] = {	/* Array to store the words from 'words' text file */
-     # include "../words"
+     # include "words"
  };
 
  /* -- Contains all the hangman functionality -- */
@@ -53,7 +53,7 @@
 	part_word[i] = '\0';
 
 	sprintf (outbuf, "WORD: %s LIVES: %d \n", part_word, lives);
- 	write (out, outbuf, strlen(outbuf));
+ 	sendto (out, outbuf, strlen(outbuf), 0, (struct sockaddr *) &;
 
 	/* -- Main loop for guesses and win/lose logic -- */
  	while (game_state == 'I')
