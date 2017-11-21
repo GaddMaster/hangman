@@ -42,6 +42,8 @@ int main (int argc, char * argv [])
     
     char * string;
     
+    char input[5];
+    
  	 char i_line[LINESIZE];
  	 char o_line[LINESIZE];
  	 int gameStateValues[VALUECOUNT];
@@ -84,38 +86,49 @@ int main (int argc, char * argv [])
 		//printf("\tGAME STATE VALUE %d\n", gameStateValues[x]);}
 	
 	//player.sessionID = gameStateValues[0];
-
-	printf("\tENTER SESSION ID OR -ZERO- FOR NEW GAME\n");
 	
-	char input[30];
-	
+	//GET PLAYER SESSION ID OR REQUEST NEW GAME
+	printf("\tENTER -SESSION ID- OR -NEW- FOR NEW GAME : \t");
 	fgets(input, sizeof(input), stdin);
+	printf("%s\n", input);
 	
-	printf("\tYOUR INPUT : %s", input);
-	
-	if(strcmp(input, "NEW"))
+	if(strcmp(input, "NEW") || strcmp(input, "new") || strcmp(input, "n") || strcmp(input, "N"))
 	{
 		printf("\tNEW GAME SELECTED\n");
-		printf("\tPICK DIFFICULTY - 1, 2 OR 3\n");
-		fgets(input, sizeof(input), stdin);
 		
+
+		printf("\tPICK DIFFICULTY : 1 - 3\n");
+		fgets(input, sizeof(input), stdin);
 		printf("\tDIFFICULTY SELECTED : %s\n", input);
-		player.gameState = 1;
 		player.difficulty = atoi(input);
+
 		
 		// CREATE REQUEST FOR WORD STRING
-		snprintf(BUFFER, sizeof(BUFFER), "0 %d", player.difficulty);
-		printf("PASS\tBUFFER:%s\n", BUFFER);
+		memset(&BUFFER[0], 0, sizeof(BUFFER));
+		BUFFER[0] = '0';
+		BUFFER[1] = ' ';
+		switch(player.difficulty){
+			case 1  : BUFFER[2] = '1';break;
+			case 2  : BUFFER[2] = '2';break;
+			case 3  : BUFFER[2] = '3';break;
+			default : BUFFER[2] = '1';break;
+		}
+		BUFFER[2] = '1';
+		BUFFER[3] = ' ';
+		BUFFER[4] = '0';
+		BUFFER[sizeof(BUFFER)] = '\0';
+	
 		
 		// SEND SERVER REQUEST FOR WORD
-		if( send(network_socket, BUFFER, strlen(BUFFER), 0) != strlen(BUFFER) ) 
+		printf("SEND\tSERVER:%s\n", BUFFER);
+		if(send(network_socket, BUFFER, strlen(BUFFER), 0) != strlen(BUFFER)) 
 		{perror("ERROR\tSEND ERROR\n");
-		}else{printf("PASS\tREQUEST FOR WORD SENT\n");}
+		}else{printf("PASS\tREQUEST FOR WORD SENT : %s\n", BUFFER);}
 		
 		if(recv(network_socket, BUFFER, 1024, 0) < 0)
-		{
-			printf("ERROR\tRECIEVE ERROR\n");
-		}else{printf("PASS\tRESPONSE RECIEVED: %s\n", BUFFER);}
+		{printf("ERROR\tRECIEVE ERROR\n");
+		}else{printf("PASS\tRESPONSE RECIEVED:%s\n", BUFFER);}
+
 	}
 	else
 	{
@@ -135,10 +148,13 @@ int main (int argc, char * argv [])
 	}
 	
 	//	GAME ZONE
-	while(player.gameState != 4)
+	while(player.gameState != 4 || player.gameState != 5)
 	{
-		
+		printf("GAME\tPLAYING\n");
+		break;
 	}
+	
+	
 	
 	
 	

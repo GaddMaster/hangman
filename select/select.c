@@ -160,7 +160,7 @@ int main(int argc , char *argv[])
                 //FIND EMTPY POSITION
                 if(  players[i].client_socket == 0 )
                 {
-                     players[i].client_socket = new_socket;
+                    players[i].client_socket = new_socket;
                     printf("PASS\tADDED PLAYER %d TO PLAYER LIST POSITION%d\n" , new_socket, i);
                      
                     break;
@@ -176,12 +176,13 @@ int main(int argc , char *argv[])
               
             if (FD_ISSET( sd , &master_set)) 
             {
+            	memset(&buffer[0], 0, sizeof(buffer));
                 //CHECK FOR CLOSING AND INCOMING MESSAGE
                 if ((valread = read( sd , buffer, 1024)) == 0)
                 {
                     // CLIENT DISCONNECTED
                     getpeername(sd , (struct sockaddr*)&address , (socklen_t*)&addrlen);
-                    printf("Host disconnected , ip %s , port %d \n" , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
+                    printf("PASS\tPLAYER %d HAS LEFT SERVER IP:%s\tPORT:%d\n" , players[i].ID, inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
                       
                     //CLOSE SOCKET AND MARK AS ZERO
                     close( sd );
@@ -189,8 +190,38 @@ int main(int argc , char *argv[])
                 }
                 else
                 {
-                    //snprintf(buffer, sizeof(buffer), "%s %d %d", players[i].word_state, players[i].guesses, players[i].difficulty);
-                    //send(sd , buffer , strlen(buffer) , 0 );
+                	// PROTOCOL RECEIVE : SESSION ID 0 - 10000 / NEW GAME 0 - DIFFICULTY - GUESS 
+                	// PROTOCOL SEND    : WORD STATE - GUESSES 
+
+                	
+					printf("TEST\tBUFFER_START:%s\n", buffer);
+					
+					char * array[2];
+					
+					int i = 0;
+					
+					array[i] = strtok(buffer, " ");
+					
+					while(array[i] != NULL){
+						array[++i] = strtok(NULL, " ");
+					}
+					buffer[sizeof(buffer)] = '\0';
+					
+					printf("TEST\t0:%s\n", array[0]);
+					printf("TEST\t1:%s\n", array[1]);
+					printf("TEST\t2:%s\n", array[2]);
+					
+					
+					
+						
+					// PREPARE PLAYER GUESS REQUEST
+					memset(&buffer[0], 0, sizeof(buffer));
+					snprintf(buffer, sizeof(buffer), "%s %d %d", "----f-----e--", 2, 2);
+					printf("PASS\tBUFFER_END:%s\n", buffer);
+					
+                 	buffer[sizeof(buffer)-2] = '\0';
+                	send(sd , buffer , strlen(buffer) , 0 );
+                    
                 }
             }
         }
@@ -220,54 +251,6 @@ void clear()
 	system("@cls||clear");
 }
 
-
-
-
-                   	/*
-                	int type = 0;
-                	
-					printf("BUFFER:,%s\n", buffer);
-					
-					players[i].difficulty = 1;
-	
-					if(type = 0){
-						printf("PASS\tNEW GAME REQUEST\n");
-						players[i].sessionID = rand() % 10000;
-						int unique = TRUE;
-			
-						// CHECK IF SESSION ID IS UNIQUE 
-					   	do{for(int checker = 0; checker < max_players; checker++) 
-							{if(players[i].sessionID == players[checker].sessionID && players[i].ID != players[checker].ID) 
-								{unique = FALSE;}}
-						}while(!unique);
-		
-						printf("PASS\tSESSION ID %d HAS BEEN ESTABLISHED\n", players[i].sessionID);
-			
-						
-					 	// PICK RANDOM WORD FROM OUR LIST
-						int seed = time(NULL);
-						srand(seed);
-					 	//players[i].word = word[rand() % NUMWORDS];
-					 	players[i].word = "MyWording";
-					 	players[i].wordLength = strlen(players[i].word);
-					 	for (i = 0; i < players[i].wordLength; i++) players[i].word_state[i]='-';
-						players[i].state = 1; // ACTIVE STATE
-						
-						switch(players[i].difficulty){
-							case 1: players[i].guesses = 6;break;
-							case 2: players[i].guesses = 5;break;
-							case 3: players[i].guesses = 4;break;
-							default: players[i].guesses = 6;break;
-						}
-						
-						// PREPARE PLAYER GUESS REQUEST
-						snprintf(buffer, sizeof(buffer) - 2, "%s %d %d", players[i].word_state, players[i].guesses, players[i].difficulty);
-						printf("PASS\tBUFFER:%s\n", buffer);
-						
-                     	buffer[sizeof(buffer)-2] = '\0';
-                    	send(sd , buffer , strlen(buffer) , 0 );
-                    }
-                    */
                 
 
 
