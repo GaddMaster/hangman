@@ -20,8 +20,9 @@ char * word [] = {
 #define TRUE   1
 #define FALSE  0
 #define PORT 8888
-#define NUMWORDS 10
+#define NUMWORDS 9
 #define VALUECOUNT 2
+#define PLAYERMAX 30
 
 struct Player{
 	int ID;
@@ -51,6 +52,7 @@ int main(int argc , char *argv[])
     
     int activity;
     int i;
+    int x;
     int valread;
     int sd;
     int max_sd;
@@ -194,34 +196,45 @@ int main(int argc , char *argv[])
                 	// PROTOCOL SEND    : WORD STATE - GUESSES 
 
                 	
-					printf("TEST\tBUFFER_START:%s\n", buffer);
-					
-					char * array[2];
-					
-					int i = 0;
-					
-					array[i] = strtok(buffer, " ");
-					
-					while(array[i] != NULL){
-						array[++i] = strtok(NULL, " ");
-					}
-					buffer[sizeof(buffer)] = '\0';
-					
-					printf("TEST\t0:%s\n", array[0]);
-					printf("TEST\t1:%s\n", array[1]);
-					printf("TEST\t2:%s\n", array[2]);
-					
-					
-					
-						
+			printf("TEST\tBUFFER_START:%s\n", buffer);
+			
+			char * array[2];
+			
+			int i = 0;
+			
+			array[i] = strtok(buffer, " ");
+			
+			while(array[i] != NULL){
+				array[++i] = strtok(NULL, " ");
+			}
+			buffer[sizeof(buffer)] = '\0';
+			
+			if(array[0] == 0){ // NEW GAME REQUEST
+				players[i].word = word[rand() % NUMWORDS];
+				for(x = 0; x < sizeof(players[i].word); x++) players[i].word_state[x] = '-';
+			}
+			else{ //SEARCH SESSION ID AND RE-ACTIVATE OLD GAME
+				int found = FALSE;
+				for(x = 0; x < PLAYERMAX; x++) if(atoi(array[0]) == players[x].sessionID) found = TRUE;
+				
+				if(found){
 					// PREPARE PLAYER GUESS REQUEST
 					memset(&buffer[0], 0, sizeof(buffer));
-					snprintf(buffer, sizeof(buffer), "%s %d %d", "----f-----e--", 2, 2);
+					snprintf(buffer, sizeof(buffer), "%s %d\n", players[i].word, guesses);
 					printf("PASS\tBUFFER_END:%s\n", buffer);
-					
-                 	buffer[sizeof(buffer)-2] = '\0';
-                	send(sd , buffer , strlen(buffer) , 0 );
-                    
+				 	buffer[sizeof(buffer)-2] = '\0';
+					send(sd , buffer , strlen(buffer) , 0 );
+				}
+				else{
+					// FAKE SESSION ID - KILL
+					memset(&buffer[0], 0, sizeof(buffer));
+					snprintf(buffer, sizeof(buffer), "%s", "ERROR\tNOT VALID SESSION ID - ENDING CONNECTION - BYE");
+					printf("PASS\tBUFFER_END:%s\n", buffer);
+				 	buffer[sizeof(buffer)] = '\0';
+					send(sd , buffer , strlen(buffer) , 0 );
+				}
+				
+			}
                 }
             }
         }
