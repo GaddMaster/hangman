@@ -39,6 +39,10 @@ int main (int argc, char * argv [])
 	char 	BUFFER[1024];
 	char 	input[5];
 	char * 	token;
+	int 	len;
+	char * 	array[2];
+	int 	i;
+	char 	place[6];
 	 
 	struct Player player;
       
@@ -112,9 +116,7 @@ int main (int argc, char * argv [])
 		
 		player.gameState = 1;
 		
-		char * array[2];
-		
-		int i = 0;
+		i = 0;
 		
 		array[i] = strtok(BUFFER, " ");
 		
@@ -139,13 +141,13 @@ int main (int argc, char * argv [])
 	{
 		//REQUEST TO CONTINUE INITIALISE OLD GAME
 		printf("\tTRYING TO RE-INITIALISE OLD GAME\n");
-		char place[6];
 		sprintf(place, "%s", player.sessionID);
-		int len = strlen(place)+5;
+		
+		len = strlen(place)+5;
 		
 		memset(&BUFFER[0], 0, sizeof(BUFFER));
 		printf("TEST\tBUFFER_NOW:%s\n", BUFFER);
-		snprintf(BUFFER, len, "%d %d %d", player.sessionID, player.difficulty, 0);
+		snprintf(BUFFER, len, "%s %d %d", player.sessionID, player.difficulty, 0);
 		printf("PASS\tBUFFER_END:%s\n", BUFFER);
 		
 		// SEND SERVER REQUEST FOR WORD
@@ -159,9 +161,7 @@ int main (int argc, char * argv [])
 		
 		player.gameState = 1;
 		
-		char * array[2];
-		
-		int i = 0;
+		i = 0;
 		
 		array[i] = strtok(BUFFER, " ");
 		
@@ -182,29 +182,57 @@ int main (int argc, char * argv [])
 		printf("STRUCT\tWORD:%s\n", player.word);
 		printf("STRUCT\tGUESSES:%d\n", player.guesses);
 	}
+
 	
 	//GAME ZONE
 	while(player.gameState != 4 || player.gameState != 5)
 	{
-		printf("GAME\tPLAYING\n");
-		
 		player.gameState = printHangman(player.word, player.guesses);
+		
+		if(player.gameState == 4 || player.gameState == 5) break;
 		
 		//GUESS CHARACTER
 		printf("GUESS\tENTER: ");
 		fgets(input, sizeof(input), stdin);
 		printf("INPUT\t%s\n", input);
 		
-		
-		
+		len = strlen(player.sessionID) + 4;
+	
+		memset(&BUFFER[0], 0, sizeof(BUFFER));
+		printf("TEST\tBUFFER_NOW:%s\n", BUFFER);
+		snprintf(BUFFER, len, "%s %d %s", player.sessionID, player.difficulty, input);
+		printf("PASS\tBUFFER_END:%s\n", BUFFER);
+
 		//SEND SERVER GUESS
 		if(send(network_socket, BUFFER, strlen(BUFFER), 0) != strlen(BUFFER) ) 
 		{perror("ERROR\tSEND ERROR\n");
 		}else{printf("PASS\tREQUEST TO CONTINUE SESSION SENT\n");}
 		
-		//if(recv(network_socket, BUFFER, 1024, 0) < 0)
-		//{printf("ERROR\tRECIEVE ERROR\n");
-		//}else{printf("PASS\tRESPONSE RECIEVED: %s\n", BUFFER);}
+		memset(&BUFFER[0], 0, sizeof(BUFFER));
+		if(recv(network_socket, BUFFER, 1024, 0) < 0)
+		{printf("ERROR\tRECIEVE ERROR\n");
+		}else{printf("PASS\tRESPONSE RECIEVED:%s\n", BUFFER);}
+		
+		i = 0;
+		
+		array[i] = strtok(BUFFER, " ");
+		
+		while(array[i] != NULL){
+			array[++i] = strtok(NULL, " ");
+		}
+		BUFFER[sizeof(BUFFER)] = '\0';
+		
+		printf("TEST\tARRAY 0 : %s\n", array[0]);
+		printf("TEST\tARRAY 1 : %s\n", array[1]);
+		printf("TEST\tARRAY 2 : %s\n", array[2]);
+		
+		strcpy(player.sessionID , array[0]);
+		strcpy(player.word , array[1]);
+		player.guesses = atoi(array[2]);
+		
+		printf("STRUCT\tSESSIONID:%s\n", player.sessionID);
+		printf("STRUCT\tWORD:%s\n", player.word);
+		printf("STRUCT\tGUESSES:%d\n", player.guesses);
 	
 	}
 	
@@ -212,18 +240,18 @@ int main (int argc, char * argv [])
 		case 1:printf("END\tGAME OVER LOSER");
 		case 2:printf("END\tWELL DONE WINNER");
 	}
-	
-	
-	
-	//sleep(1000);
     
     	printf("PASS\tCLOSING NETWORK SOCKET\n");
     
  	close(network_socket);
  	
  	printf("PASS\tNETWORK SOCKET CLOSED\n");
+ 	
+ 	clear();
+ 	
+ 	exit(0);
     
-    return 0;
+    	return 0;
 
 }
 
