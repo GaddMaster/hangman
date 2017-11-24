@@ -15,19 +15,19 @@
 #define IP 127.0.0.1
 #define VALUECOUNT 2
 #define LINESIZE 80
+#define BUFFERMAX 1024
 
 struct Player{
 	int ID;
 	int client_socket;
 	char word[30];
-	char word_state[30];
 	int difficulty;
 	int guesses;
-	int sessionID;
-	int gameState;	// ACTIVE:1	GAME OVER:0
+	char sessionID[6];
+	int gameState;	// ACTIVE:0	GAME OVER:1	WIN:2
 };
 
-void printHangMan(char word[30], char wordState[30], int guesses);
+int printHangman(char word[30], int guesses);
 
 void clear();
 
@@ -35,56 +35,41 @@ int main (int argc, char * argv [])
 {
 	clear();
 
-	int network_socket;
-	//int client_socket;
-	
-    char BUFFER[1024]; // PROTOCOL - SESSION ID - TYPE - FULL WORD - WORD STATE - GAME STATE
-    
-    char * string;
-    
-    char input[5];
-    
- 	 char i_line[LINESIZE];
- 	 char o_line[LINESIZE];
- 	 int gameStateValues[VALUECOUNT];
- 	 
- 	 struct Player player;
+	int 	network_socket;
+	char 	BUFFER[1024];
+	char 	input[5];
+	char * 	token;
+	 
+	struct Player player;
       
-    //CREATE MAIN SOCKET
-    if( (network_socket = socket(AF_INET , SOCK_STREAM , 0)) == 0){
-        perror("ERROR\tSOCKET ERROR");
-        exit(EXIT_FAILURE);
-    }else{printf("PASS\tSOCKET CREATED AT %d\n", network_socket);}
- 
-    struct sockaddr_in server_address;
-    server_address.sin_family = AF_INET;
-    server_address.sin_addr.s_addr = INADDR_ANY;
-    server_address.sin_port = htons(PORT);
-	
-    //CONNECT TO SERVER
-    if (connect(network_socket, (struct sockaddr *)&server_address, sizeof(server_address))<0){
-        perror("ERROR\tBIND ERROR");
-        exit(EXIT_FAILURE);
-    }else{printf("PASS\tCONNECTED TO NETWORK SOCKET ADDRESS %d\n", network_socket);}
+	//CREATE MAIN SOCKET
+	if( (network_socket = socket(AF_INET , SOCK_STREAM , 0)) == 0){
+	perror("ERROR\tSOCKET ERROR");
+	exit(EXIT_FAILURE);
+	}else{printf("PASS\tSOCKET CREATED AT %d\n", network_socket);}
+
+	struct sockaddr_in server_address;
+	server_address.sin_family = AF_INET;
+	server_address.sin_addr.s_addr = INADDR_ANY;
+	server_address.sin_port = htons(PORT);
+
+	//CONNECT TO SERVER
+	if (connect(network_socket, (struct sockaddr *)&server_address, sizeof(server_address))<0){
+	perror("ERROR\tBIND ERROR");
+	exit(EXIT_FAILURE);
+	}else{printf("PASS\tCONNECTED TO NETWORK SOCKET ADDRESS %d\n", network_socket);}
 
 	struct sockaddr_in client_address;
 	int size = sizeof(struct sockaddr);
 	
-	if(recv(network_socket, BUFFER, 1024, 0) < 0)
+	if(recv(network_socket, BUFFER, BUFFERMAX, 0) < 0)
 	{printf("ERROR\tRECIEVE ERROR\n");
 	}else{printf("PASS\tRESPONSE RECIEVED: %s\n", BUFFER);}
 
 	//GET MY MACNHINE NAME
 	int socket_name = getsockname(network_socket, (struct sockaddr * ) &client_address, &size);
 	
-	string = strtok(BUFFER, " ");
-	
-	//for(int x = 0; x < VALUECOUNT; x++){
-		//gameStateValues[x] = atoi(string);
-		//string = strtok(NULL, " ");
-		//printf("\tGAME STATE VALUE %d\n", gameStateValues[x]);}
-	
-	//player.sessionID = gameStateValues[0];
+	token = strtok(BUFFER, " ");
 	
 	//GET PLAYER SESSION ID OR REQUEST NEW GAME
 	printf("\tENTER -SESSION ID- OR -NEW- FOR NEW GAME : \t");
@@ -101,7 +86,7 @@ int main (int argc, char * argv [])
 		printf("\tDIFFICULTY SELECTED : %s\n", input);
 		player.difficulty = atoi(input);
 
-		// CREATE REQUEST FOR WORD STRING
+		//CREATE REQUEST FOR WORD STRING - MANUAL EXAMPLE OF HANDLE CHARACTER ARRAYS
 		memset(&BUFFER[0], 0, sizeof(BUFFER));
 		BUFFER[0] = '0';
 		BUFFER[1] = ' ';
@@ -124,54 +109,113 @@ int main (int argc, char * argv [])
 		if(recv(network_socket, BUFFER, 1024, 0) < 0)
 		{printf("ERROR\tRECIEVE ERROR\n");
 		}else{printf("PASS\tRESPONSE RECIEVED:%s\n", BUFFER);}
-
+		
+		player.gameState = 1;
+		
+		char * array[2];
+		
+		int i = 0;
+		
+		array[i] = strtok(BUFFER, " ");
+		
+		while(array[i] != NULL){
+			array[++i] = strtok(NULL, " ");
+		}
+		BUFFER[sizeof(BUFFER)] = '\0';
+		
+		printf("TEST\tARRAY 0 : %s\n", array[0]);
+		printf("TEST\tARRAY 1 : %s\n", array[1]);
+		printf("TEST\tARRAY 2 : %s\n", array[2]);
+		
+		strcpy(player.sessionID , array[0]);
+		strcpy(player.word , array[1]);
+		player.guesses = atoi(array[2]);
+		
+		printf("STRUCT\tSESSIONID:%s\n", player.sessionID);
+		printf("STRUCT\tWORD:%s\n", player.word);
+		printf("STRUCT\tGUESSES:%d\n", player.guesses);
 	}
 	else
 	{
 		//REQUEST TO CONTINUE INITIALISE OLD GAME
 		printf("\tTRYING TO RE-INITIALISE OLD GAME\n");
-		//PENDING CODE
+		char place[6];
+		sprintf(place, "%s", player.sessionID);
+		int len = strlen(place)+5;
 		
-		int len = strlen(itoa(player.sessionID))+5;
 		memset(&BUFFER[0], 0, sizeof(BUFFER));
 		printf("TEST\tBUFFER_NOW:%s\n", BUFFER);
-		snprintf(BUFFER, len, "%s %d %d", player.serialID, players.difficulty, 0);
+		snprintf(BUFFER, len, "%d %d %d", player.sessionID, player.difficulty, 0);
 		printf("PASS\tBUFFER_END:%s\n", BUFFER);
-		send(sd , BUFFER , strlen(BUFFER) , 0 );
 		
 		// SEND SERVER REQUEST FOR WORD
-		if( send(network_socket, BUFFER, strlen(BUFFER), 0) != strlen(BUFFER) ) 
+		if(send(network_socket, BUFFER, strlen(BUFFER), 0) != strlen(BUFFER) ) 
 		{perror("ERROR\tSEND ERROR\n");
 		}else{printf("PASS\tREQUEST TO CONTINUE SESSION SENT\n");}
 		
 		if(recv(network_socket, BUFFER, 1024, 0) < 0)
 		{printf("ERROR\tRECIEVE ERROR\n");
 		}else{printf("PASS\tRESPONSE RECIEVED: %s\n", BUFFER);}
+		
+		player.gameState = 1;
+		
+		char * array[2];
+		
+		int i = 0;
+		
+		array[i] = strtok(BUFFER, " ");
+		
+		while(array[i] != NULL){
+			array[++i] = strtok(NULL, " ");
+		}
+		BUFFER[sizeof(BUFFER)] = '\0';
+		
+		printf("TEST\tARRAY 0 : %s\n", array[0]);
+		printf("TEST\tARRAY 1 : %s\n", array[1]);
+		printf("TEST\tARRAY 2 : %s\n", array[2]);
+		
+		strcpy(player.sessionID , array[0]);
+		strcpy(player.word , array[1]);
+		player.guesses = atoi(array[2]);
+		
+		printf("STRUCT\tSESSIONID:%s\n", player.sessionID);
+		printf("STRUCT\tWORD:%s\n", player.word);
+		printf("STRUCT\tGUESSES:%d\n", player.guesses);
 	}
 	
-	//	GAME ZONE
+	//GAME ZONE
 	while(player.gameState != 4 || player.gameState != 5)
 	{
 		printf("GAME\tPLAYING\n");
 		
-		// SEND SERVER GQUESS
-		if( send(network_socket, BUFFER, strlen(BUFFER), 0) != strlen(BUFFER) ) 
+		player.gameState = printHangman(player.word, player.guesses);
+		
+		//GUESS CHARACTER
+		printf("GUESS\tENTER: ");
+		fgets(input, sizeof(input), stdin);
+		printf("INPUT\t%s\n", input);
+		
+		
+		
+		//SEND SERVER GUESS
+		if(send(network_socket, BUFFER, strlen(BUFFER), 0) != strlen(BUFFER) ) 
 		{perror("ERROR\tSEND ERROR\n");
 		}else{printf("PASS\tREQUEST TO CONTINUE SESSION SENT\n");}
 		
-		if(recv(network_socket, BUFFER, 1024, 0) < 0)
-		{printf("ERROR\tRECIEVE ERROR\n");
-		}else{printf("PASS\tRESPONSE RECIEVED: %s\n", BUFFER);}
-		
-		
-		
+		//if(recv(network_socket, BUFFER, 1024, 0) < 0)
+		//{printf("ERROR\tRECIEVE ERROR\n");
+		//}else{printf("PASS\tRESPONSE RECIEVED: %s\n", BUFFER);}
+	
+	}
+	
+	switch(player.gameState){
+		case 1:printf("END\tGAME OVER LOSER");
+		case 2:printf("END\tWELL DONE WINNER");
 	}
 	
 	
 	
-	
-	
-	sleep(1000);
+	//sleep(1000);
     
     	printf("PASS\tCLOSING NETWORK SOCKET\n");
     
@@ -188,13 +232,13 @@ void clear()
 	system("@cls||clear");
 }
 
-int printHangman(char word[30], char wordState[30], int guesses)
+int printHangman(char word[30], int guesses)
 {
 	clear(); // CLEAR CONSOLE FOR NEW STATE TO BE DISPLAYED
 	
 	int gameOver = 0;
 	
-	printf("\tHANGMAN EXPRESS");
+	printf("\tHANGMAN EXPRESS\n\n");
 	
 	switch(guesses){
 		case 0:
@@ -307,10 +351,10 @@ int printHangman(char word[30], char wordState[30], int guesses)
 			break;
 	}
 	
-	printf("\t%s", wordState);
-	
-	printf("\tGUESS LETTER\n\n");
+	printf("\nPLAY\tWORD:%s\tGUESSES:%d\n", word, guesses);
 	
 	return gameOver;
 }
+
+
 
