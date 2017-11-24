@@ -23,6 +23,7 @@ char * word [] = {
 #define NUMWORDS 9
 #define VALUECOUNT 2
 #define PLAYERMAX 30
+#define BUFFSIZE 1023
 
 struct Player{
 	int ID;
@@ -37,6 +38,7 @@ struct Player{
 };
 
 void clear();
+char * prepareString(char * x, char * y);
  
 int main(int argc , char *argv[])
 {
@@ -56,12 +58,13 @@ int main(int argc , char *argv[])
     int valread;
     int sd;
     int max_sd;
+    char terminator = '\0';
     
     struct sockaddr_in address;
       
-    char buffer[1024];
+    char BUFFER[1024];
     
-    char * sBUFFER;
+    char * pBUFFER;
     
     char gameStateValues[2];
       
@@ -163,9 +166,13 @@ int main(int argc , char *argv[])
                 if(  players[i].client_socket == 0 )
                 {
                     players[i].client_socket = new_socket;
-                    printf("PASS\tADDED PLAYER %d TO PLAYER LIST POSITION%d\n" , new_socket, i);
+                    printf("PASS\tADDED CLIENT %d TO PLAYER LIST POSITION %d\n" , new_socket, i);
                      
                     break;
+                }
+                else{
+			memset(&BUFFER[0], 0, sizeof(BUFFER));
+			send(sd , BUFFER , strlen(BUFFER) , 0 );
                 }
             }
         }
@@ -178,17 +185,17 @@ int main(int argc , char *argv[])
               
             if (FD_ISSET( sd , &master_set)) 
             {
-            	memset(&buffer[0], 0, sizeof(buffer));
+            	memset(&BUFFER[0], 0, sizeof(BUFFER));
                 //CHECK FOR CLOSING AND INCOMING MESSAGE
-                if ((valread = read( sd , buffer, 1024)) == 0)
+                if ((valread = read( sd , BUFFER, 1024)) == 0)
                 {
-                    // CLIENT DISCONNECTED
-                    getpeername(sd , (struct sockaddr*)&address , (socklen_t*)&addrlen);
-                    printf("PASS\tPLAYER %d HAS LEFT SERVER IP:%s\tPORT:%d\n" , players[i].ID, inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
-                      
-                    //CLOSE SOCKET AND MARK AS ZERO
-                    close( sd );
-                    players[i].client_socket = 0;
+			// CLIENT DISCONNECTED
+			getpeername(sd , (struct sockaddr*)&address , (socklen_t*)&addrlen);
+			printf("PASS\tCLIENT %d HAS LEFT SERVER IP:%s\tPORT:%d\n" , players[i].ID, inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
+
+			//CLOSE SOCKET AND MARK AS ZERO
+			close( sd );
+			players[i].client_socket = 0;
                 }
                 else
                 {
@@ -196,42 +203,88 @@ int main(int argc , char *argv[])
                 	// PROTOCOL SEND    : WORD STATE - GUESSES 
 
                 	
-			printf("TEST\tBUFFER_START:%s\n", buffer);
+			printf("TEST\tSERVER START REQUEST : %s\n", BUFFER);
 			
 			char * array[2];
 			
 			int i = 0;
 			
-			array[i] = strtok(buffer, " ");
+			array[i] = strtok(BUFFER, " ");
 			
 			while(array[i] != NULL){
 				array[++i] = strtok(NULL, " ");
 			}
-			buffer[sizeof(buffer)] = '\0';
+			BUFFER[sizeof(BUFFER)] = '\0';
 			
-			if(array[0] == 0){ // NEW GAME REQUEST
+			printf("TEST\tARRAY 0 : %s\n", array[0]);
+			printf("TEST\tARRAY 1 : %s\n", array[1]);
+			printf("TEST\tARRAY 2 : %s\n", array[2]);
+			
+			if(strcmp(array[0], "0") == 0){ // NEW GAME REQUEST
+			
+				printf("NEW\tPLAYER REQUEST\n");
+
 				players[i].word = word[rand() % NUMWORDS];
-				for(x = 0; x < sizeof(players[i].word); x++) players[i].word_state[x] = '-';
+				
+				memset(&players[i].word_state, 0 , sizeof(players[i].word_state));
+				
+				for(x = 0; x < strlen(players[i].word); x++){
+					players[i].word_state[x] = '-';
+				}
+				players[i].word_state[x] = '|';
+				
+				printf("TEST\tWORDI:%s\n", players[i].word);
+				printf("TEST\tWORDI:%s\n", players[i].word_state);
+				
+				printf("TEST\tSIZE:%zd\n", strlen(players[i].word_state));
+				printf("TEST\tSIZE:%zd\n", strlen(players[i].word));
+				
+				printf("WORD\tNEW WORD GENERATED - %s\n", players[i].word);
+				
+				if(strcmp(array[1], "1")){
+					players[i].guesses = 3;
+					players[i].difficulty = 1;
+				}
+				else if(strcmp(array[1], "2")){
+					players[i].guesses = 4;
+					players[i].difficulty = 2;
+				}
+				else if(strcmp(array[1], "3")){
+					players[i].guesses = 5;
+					players[i].difficulty = 3;
+				}
+				else {
+					players[i].guesses = 3;
+					players[i].difficulty = 1;
+				}
+				
+				int len = strlen(players[i].word)+3;
+				
+				memset(&BUFFER[0], 0, sizeof(BUFFER));
+				printf("TEST\tBUFFER_NOW:%s\n", BUFFER);
+				snprintf(BUFFER, len, "%s %d", players[i].word, players[i].guesses);
+				printf("PASS\tBUFFER_END:%s\n", BUFFER);
+			 	
+				send(sd , BUFFER , strlen(BUFFER) , 0 );
 			}
 			else{ //SEARCH SESSION ID AND RE-ACTIVATE OLD GAME
+			
+				printf("CONT\tPLAYER REQUEST\n");
+			
 				int found = FALSE;
 				for(x = 0; x < PLAYERMAX; x++) if(atoi(array[0]) == players[x].sessionID) found = TRUE;
 				
 				if(found){
-					// PREPARE PLAYER GUESS REQUEST
-					memset(&buffer[0], 0, sizeof(buffer));
-					snprintf(buffer, sizeof(buffer), "%s %d\n", players[i].word, guesses);
-					printf("PASS\tBUFFER_END:%s\n", buffer);
-				 	buffer[sizeof(buffer)-2] = '\0';
-					send(sd , buffer , strlen(buffer) , 0 );
+					int len = strlen(players[i].word)+3;
+					memset(&BUFFER[0], 0, sizeof(BUFFER));
+					printf("TEST\tBUFFER_NOW:%s\n", BUFFER);
+					snprintf(BUFFER, len, "%s %d", players[i].word_state, players[i].guesses);
+					printf("PASS\tBUFFER_END:%s\n", BUFFER);
+					send(sd , BUFFER , strlen(BUFFER) , 0 );
 				}
 				else{
-					// FAKE SESSION ID - KILL
-					memset(&buffer[0], 0, sizeof(buffer));
-					snprintf(buffer, sizeof(buffer), "%s", "ERROR\tNOT VALID SESSION ID - ENDING CONNECTION - BYE");
-					printf("PASS\tBUFFER_END:%s\n", buffer);
-				 	buffer[sizeof(buffer)] = '\0';
-					send(sd , buffer , strlen(buffer) , 0 );
+					memset(&BUFFER[0], 0, sizeof(BUFFER));
+					send(sd , BUFFER , strlen(BUFFER) , 0 );
 				}
 				
 			}
@@ -244,25 +297,8 @@ int main(int argc , char *argv[])
 } 
 
 
-static char * rand_string(char *str, size_t size)
-{
-    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX0123456789ledobviouso";
-    if (size) {
-        --size;
-        for (size_t n = 0; n < size; n++) {
-            int key = rand() % (int) (sizeof charset - 1);
-            str[n] = charset[key];
-        }
-        str[size] = '\0';
-    }
-    return str;
-}
+void clear(){system("@cls||clear");} // CLEAR TERMINAL OR CMD
 
-
-void clear()
-{
-	system("@cls||clear");
-}
 
                 
 

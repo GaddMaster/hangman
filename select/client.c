@@ -71,8 +71,7 @@ int main (int argc, char * argv [])
 	int size = sizeof(struct sockaddr);
 	
 	if(recv(network_socket, BUFFER, 1024, 0) < 0)
-	{
-		printf("ERROR\tRECIEVE ERROR\n");
+	{printf("ERROR\tRECIEVE ERROR\n");
 	}else{printf("PASS\tRESPONSE RECIEVED: %s\n", BUFFER);}
 
 	//GET MY MACNHINE NAME
@@ -113,8 +112,8 @@ int main (int argc, char * argv [])
 			default : BUFFER[2] = '1';break;
 		}
 		BUFFER[3] = ' ';
-		BUFFER[4] = '0';
-		BUFFER[sizeof(BUFFER)] = '\0';
+		BUFFER[4] = '0'; // NO CHARACTER GUESS YET
+		BUFFER[sizeof(BUFFER)] = '\0'; // ADD TERMINATION CHARACTER
 			
 		// SEND SERVER REQUEST FOR WORD
 		printf("SEND\tSERVER:%s\n", BUFFER);
@@ -133,22 +132,39 @@ int main (int argc, char * argv [])
 		printf("\tTRYING TO RE-INITIALISE OLD GAME\n");
 		//PENDING CODE
 		
-		// CREATE REQUEST FOR WORD STRING
-		snprintf(BUFFER, sizeof(BUFFER), "%d %d", player.sessionID, player.difficulty);
-		printf("PASS\tBUFFER:%s\n", BUFFER);
+		int len = strlen(itoa(player.sessionID))+5;
+		memset(&BUFFER[0], 0, sizeof(BUFFER));
+		printf("TEST\tBUFFER_NOW:%s\n", BUFFER);
+		snprintf(BUFFER, len, "%s %d %d", player.serialID, players.difficulty, 0);
+		printf("PASS\tBUFFER_END:%s\n", BUFFER);
+		send(sd , BUFFER , strlen(BUFFER) , 0 );
 		
 		// SEND SERVER REQUEST FOR WORD
 		if( send(network_socket, BUFFER, strlen(BUFFER), 0) != strlen(BUFFER) ) 
 		{perror("ERROR\tSEND ERROR\n");
 		}else{printf("PASS\tREQUEST TO CONTINUE SESSION SENT\n");}
 		
+		if(recv(network_socket, BUFFER, 1024, 0) < 0)
+		{printf("ERROR\tRECIEVE ERROR\n");
+		}else{printf("PASS\tRESPONSE RECIEVED: %s\n", BUFFER);}
 	}
 	
 	//	GAME ZONE
 	while(player.gameState != 4 || player.gameState != 5)
 	{
 		printf("GAME\tPLAYING\n");
-		break;
+		
+		// SEND SERVER GQUESS
+		if( send(network_socket, BUFFER, strlen(BUFFER), 0) != strlen(BUFFER) ) 
+		{perror("ERROR\tSEND ERROR\n");
+		}else{printf("PASS\tREQUEST TO CONTINUE SESSION SENT\n");}
+		
+		if(recv(network_socket, BUFFER, 1024, 0) < 0)
+		{printf("ERROR\tRECIEVE ERROR\n");
+		}else{printf("PASS\tRESPONSE RECIEVED: %s\n", BUFFER);}
+		
+		
+		
 	}
 	
 	
@@ -157,7 +173,7 @@ int main (int argc, char * argv [])
 	
 	sleep(1000);
     
-    printf("PASS\tCLOSING NETWORK SOCKET\n");
+    	printf("PASS\tCLOSING NETWORK SOCKET\n");
     
  	close(network_socket);
  	
