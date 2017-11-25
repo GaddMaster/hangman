@@ -23,7 +23,7 @@ struct Player{
 	char word[30];
 	int difficulty;
 	int guesses;
-	char sessionID[6];
+	char sessionID[42];
 	int gameState;	// ACTIVE:0	GAME OVER:1	WIN:2
 };
 
@@ -85,9 +85,9 @@ int main (int argc, char * argv [])
 	
 		printf("\tNEW GAME SELECTED\n");
 		
-		printf("\tPICK DIFFICULTY : 1 - 3\n");
+		//printf("\tPICK DIFFICULTY : 1 - 3\n");
 		fgets(input, sizeof(input), stdin);
-		printf("\tDIFFICULTY SELECTED : %s\n", input);
+		//printf("\tDIFFICULTY SELECTED : %s\n", input);
 		player.difficulty = atoi(input);
 
 		//CREATE REQUEST FOR WORD STRING - MANUAL EXAMPLE OF HANDLE CHARACTER ARRAYS
@@ -125,17 +125,17 @@ int main (int argc, char * argv [])
 		}
 		BUFFER[sizeof(BUFFER)] = '\0';
 		
-		printf("TEST\tARRAY 0 : %s\n", array[0]);
-		printf("TEST\tARRAY 1 : %s\n", array[1]);
-		printf("TEST\tARRAY 2 : %s\n", array[2]);
+		//printf("TEST\tARRAY 0 : %s\n", array[0]);
+		//printf("TEST\tARRAY 1 : %s\n", array[1]);
+		//printf("TEST\tARRAY 2 : %s\n", array[2]);
 		
 		strcpy(player.sessionID , array[0]);
 		strcpy(player.word , array[1]);
 		player.guesses = atoi(array[2]);
 		
-		printf("STRUCT\tSESSIONID:%s\n", player.sessionID);
-		printf("STRUCT\tWORD:%s\n", player.word);
-		printf("STRUCT\tGUESSES:%d\n", player.guesses);
+		//printf("STRUCT\tSESSIONID:%s\n", player.sessionID);
+		//printf("STRUCT\tWORD:%s\n", player.word);
+		//printf("STRUCT\tGUESSES:%d\n", player.guesses);
 	}
 	else
 	{
@@ -146,9 +146,9 @@ int main (int argc, char * argv [])
 		len = strlen(place)+5;
 		
 		memset(&BUFFER[0], 0, sizeof(BUFFER));
-		printf("TEST\tBUFFER_NOW:%s\n", BUFFER);
+		//printf("TEST\tBUFFER_NOW:%s\n", BUFFER);
 		snprintf(BUFFER, len, "%s %d %d", player.sessionID, player.difficulty, 0);
-		printf("PASS\tBUFFER_END:%s\n", BUFFER);
+		//printf("PASS\tBUFFER_END:%s\n", BUFFER);
 		
 		// SEND SERVER REQUEST FOR WORD
 		if(send(network_socket, BUFFER, strlen(BUFFER), 0) != strlen(BUFFER) ) 
@@ -170,33 +170,38 @@ int main (int argc, char * argv [])
 		}
 		BUFFER[sizeof(BUFFER)] = '\0';
 		
-		printf("TEST\tARRAY 0 : %s\n", array[0]);
-		printf("TEST\tARRAY 1 : %s\n", array[1]);
-		printf("TEST\tARRAY 2 : %s\n", array[2]);
+		//printf("TEST\tARRAY 0 : %s\n", array[0]);
+		//printf("TEST\tARRAY 1 : %s\n", array[1]);
+		//printf("TEST\tARRAY 2 : %s\n", array[2]);
 		
 		strcpy(player.sessionID , array[0]);
 		strcpy(player.word , array[1]);
 		player.guesses = atoi(array[2]);
 		
-		printf("STRUCT\tSESSIONID:%s\n", player.sessionID);
-		printf("STRUCT\tWORD:%s\n", player.word);
-		printf("STRUCT\tGUESSES:%d\n", player.guesses);
+		//printf("STRUCT\tSESSIONID:%s\n", player.sessionID);
+		//printf("STRUCT\tWORD:%s\n", player.word);
+		//printf("STRUCT\tGUESSES:%d\n", player.guesses);
 	}
 
 	
 	//GAME ZONE
-	while(player.gameState != 4 || player.gameState != 5)
+	while(player.gameState != 1 || player.gameState != 2)
 	{
 		player.gameState = printHangman(player.word, player.guesses);
 		
-		if(player.gameState == 4 || player.gameState == 5) break;
+		if(player.gameState == 1 || player.gameState == 2) break;
 		
 		//GUESS CHARACTER
 		printf("GUESS\tENTER: ");
 		fgets(input, sizeof(input), stdin);
 		printf("INPUT\t%s\n", input);
 		
-		len = strlen(player.sessionID) + 4;
+		len = strlen(player.sessionID) + 5;
+		
+		////printf("TEST\tLENGTH:%d\n", len);
+		//printf("TEST\tSESSION ID:%s\n", player.sessionID);
+		//printf("TEST\tDIFFICULTY:%d\n", player.difficulty);
+		//printf("TEST\tSESSION ID:%s\n", input);
 	
 		memset(&BUFFER[0], 0, sizeof(BUFFER));
 		printf("TEST\tBUFFER_NOW:%s\n", BUFFER);
@@ -222,34 +227,37 @@ int main (int argc, char * argv [])
 		}
 		BUFFER[sizeof(BUFFER)] = '\0';
 		
-		printf("TEST\tARRAY 0 : %s\n", array[0]);
-		printf("TEST\tARRAY 1 : %s\n", array[1]);
+		//printf("TEST\tARRAY 0 : %s\n", array[0]);
+		////printf("TEST\tARRAY 1 : %s\n", array[1]);
 		printf("TEST\tARRAY 2 : %s\n", array[2]);
 		
 		strcpy(player.sessionID , array[0]);
 		strcpy(player.word , array[1]);
 		player.guesses = atoi(array[2]);
 		
-		printf("STRUCT\tSESSIONID:%s\n", player.sessionID);
-		printf("STRUCT\tWORD:%s\n", player.word);
-		printf("STRUCT\tGUESSES:%d\n", player.guesses);
+		//printf("STRUCT\tSESSIONID:%s\n", player.sessionID);
+		//printf("STRUCT\tWORD:%s\n", player.word);
+		////printf("STRUCT\tGUESSES:%d\n", player.guesses);
 	
 	}
 	
 	switch(player.gameState){
-		case 1:printf("END\tGAME OVER LOSER");
-		case 2:printf("END\tWELL DONE WINNER");
+		case 1:printf("END\tGAME OVER LOSER\n");break;
+		case 2:printf("END\tWELL DONE WINNER\n");break;
+		default:printf("OPS\tSOMETHING WENT WRONG\n");break;
 	}
+	
+	//REQUEST END GAME AND CLOSE
+	memset(&BUFFER[0], 0, sizeof(BUFFER));
+	if(send(network_socket, BUFFER, strlen(BUFFER), 0) != strlen(BUFFER) ) 
+	{perror("ERROR\tSEND ERROR\n");
+	}else{printf("PASS\tREQUEST TO END GAME AND SESSION\n");}
     
     	printf("PASS\tCLOSING NETWORK SOCKET\n");
     
  	close(network_socket);
  	
  	printf("PASS\tNETWORK SOCKET CLOSED\n");
- 	
- 	clear();
- 	
- 	exit(0);
     
     	return 0;
 
@@ -367,21 +375,29 @@ int printHangman(char word[30], int guesses)
 			break;
 		default:
 			printf("\t--------------------\n");
-			printf("\t|               |   \n");
-			printf("\t|               O   \n");
-			printf("\t|              -I-  \n");
-			printf("\t|               |   \n");
-			printf("\t|               ^   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
+			printf("\t|                   \n");
 			printf("\t|                   \n");
 			printf("\t|                   \n");
 			printf("\t--------------------\n");
-			gameOver = TRUE;
+			gameOver = FALSE;
 			break;
 	}
 	
 	printf("\nPLAY\tWORD:%s\tGUESSES:%d\n", word, guesses);
 	
-	return gameOver;
+	int winner = 1;
+
+	
+	for(int x = 0; x < strlen(word); x++) 
+		if(word[x] == '-') 
+			winner = 0;
+
+	if(winner) return 2;
+	else return gameOver;
 }
 
 

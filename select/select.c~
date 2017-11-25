@@ -45,256 +45,309 @@ int main(int argc , char *argv[])
 {
 	clear();
 
-    int opt = TRUE;
-    int serv_socket;
-    int addrlen;
-    int new_socket;
-    
-    struct Player players[5];
-    int max_players = 5;
-    
-    int activity;
-    int i;
-    int x;
-    int valread;
-    int sd;
-    int max_sd;
-    char terminator = '\0';
-    int len;
-    
-    struct sockaddr_in address;
-      
-    char BUFFER[1024];
-    
-    char * pBUFFER;
-    
-    char gameStateValues[2];
-      
-    fd_set master_set;
-      
-    char message[1024];
-     char * welcome = "WELCOME TO HANGMAN EXPRESS \r\n";
-    char * serverFull = "SERVER IS FULL - PLEASE TRY AGAIN LATER \r\n";
-  
-    for (i = 0; i < max_players; i++) {players[i].client_socket = 0;players[i].ID == i;} //INITILISE ALL CLIENT SOCKETS TO ZERO
+	int 	opt = TRUE;
+	int 	serv_socket;
+	int 	addrlen;
+	int 	new_socket;
 
+	struct Player players[5];
+	int 	max_players = 5;
 
-    //CREATE MAIN SOCKET
-    if( (serv_socket = socket(AF_INET , SOCK_STREAM , 0)) == 0){
-        perror("ERROR\tSOCKET ERROR");
-        exit(EXIT_FAILURE);
-    }else{printf("PASS\tSOCKET CREATED AT %d\n", serv_socket);}
-  
-  
-    //MAIN SOCKET ALLOW MULTIPLY CONNECTIONS
-    if( setsockopt(serv_socket, SOL_SOCKET, SO_REUSEADDR, (char * ) & opt, sizeof(opt)) < 0 ){
-        perror("ERROR\tSET SOCKET OPTION ERROR");
-        exit(EXIT_FAILURE);
-    }else{printf("PASS\tSOCKET MULTIPLY CONNECTIONS SET\n");}
-  
+	int 	activity;
+	int 	i;
+	int 	x;
+	int 	valread;
+	int 	sd;
+	int 	max_sd;
+	char 	terminator = '\0';
+	int 	len;
+	char * 	array[2];
 
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons( PORT );
-      
-      
-    //bind the socket to localhost port 8888
-    if (bind(serv_socket, (struct sockaddr *)&address, sizeof(address))<0){
-        perror("ERROR\tBIND ERROR");
-        exit(EXIT_FAILURE);
-    }else{printf("PASS\tSOCKET BINDED TO ADDRESS\n");}
-    
-    
-    printf("PASS\tLISTENING PORT : %d \n", PORT);
-    
-     
-    //LISTEN - SET MAX 3 CONNECTION - TESTING
-    if (listen(serv_socket, 3) < 0){
-        perror("ERROR\tLISTENING ERROR");
-        exit(EXIT_FAILURE);
-    }else{printf("PASS\tSOCKET LISTENING\n");}
-      
-      
-    //WAITING FOR CONNECTIONS MESSAGE
-    addrlen = sizeof(address);
-    puts("PASS\tSERVER WAITING FOR CONNECTIONS . . . . \n\n");
-     
-    while(TRUE) 
-    {
-    
-        FD_ZERO(&master_set); // CLEAR MASTER SET
-  
-        //ADD MAIN SOCKET TO SET
-        FD_SET(serv_socket, &master_set);
-        max_sd = serv_socket;
-        
-        
-        /////////////////////////////////////////////////////////////////////////////////
-        //ADD CHILD SOCKET TO SET
-        for ( i = 0 ; i < max_players ; i++) 
-        {
-            sd = players[i].client_socket; // SOCKET DESCRIPTOR
-            if(sd > 0) FD_SET( sd , &master_set); // ADD TO READ LIST IOF VALID SOCKET DESCRIPTOR
-            if(sd > max_sd) max_sd = sd; // WE NEED HIGHEST FILE DESCRIPTOR FOR THE SELECT FUNCTION
-        }
-        /////////////////////////////////////////////////////////////////////////////////
-    
-        
-        activity = select( max_sd + 1 , &master_set , NULL , NULL , NULL); // CALL SELECT AND WAIT FOR ACTIVITY - NO TIMEOUT SELECTED SO INDEFINITE
-    
-    
-        if ((activity < 0) && (errno != EINTR)) printf("ERROR\tSELECT ERROR - FUCKED\n");
-        
-          
-          
-        /////////////////////////////////////////////////////////////////////////////////
-        // CHECK MASTER SOCKET FOR INCOMING CONNECTION
-        if (FD_ISSET(serv_socket, &master_set)) 
-        {
-            if ((new_socket = accept(serv_socket, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0)
-            {perror("accept");exit(EXIT_FAILURE);
-            }else{printf("\n\nPASS\tNEW PLAYER FD:%d IP:%s PORT:%d \n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));}
+	struct sockaddr_in address;
 
-            // SEND WELCOME MESSAGE
-            if(send(new_socket, welcome, strlen(welcome), 0) != strlen(welcome) ) 
-            {perror("send");
-            }else{printf("PASS\tWELCOME MESSAGE SENT\n");}
+	char 	BUFFER[1024];
+
+	char * 	pBUFFER;
+
+	char 	gameStateValues[2];
+
+	fd_set 	master_set;
+
+	char 	message[1024];
+	char * 	welcome = "WELCOME TO HANGMAN EXPRESS \r\n";
+	char * 	serverFull = "SERVER IS FULL - PLEASE TRY AGAIN LATER \r\n";
+	
+	char	sessionID[42];
+	char	guess;
+	char	charBuffer[30];
+	//char	myArray[2];
+	
+   	//INITILISE ALL CLIENT SOCKETS TO ZERO
+	for (i = 0; i < max_players; i++) {
+		players[i].client_socket = 0;
+		players[i].ID = i;
+		players[i].word = "";
+		players[i].wordLength = 0;
+		players[i].difficulty = 0;
+		players[i].guesses = 0;
+		players[i].state = 0;
 		
-			
-            //ADD NEW PLAYER TO LIST OF PLAYERS
-            for (i = 0; i < max_players; i++) 
-            {
-                //FIND EMTPY POSITION
-                if(  players[i].client_socket == 0 )
-                {
-                    players[i].client_socket = new_socket;
-                    printf("PASS\tADDED CLIENT %d TO PLAYER LIST POSITION %d\n" , new_socket, i);
-                     
-                    break;
-                }
-                else{
-			memset(&BUFFER[0], 0, sizeof(BUFFER));
-			send(sd , BUFFER , strlen(BUFFER) , 0 );
-                }
-            }
-        }
-        /////////////////////////////////////////////////////////////////////////////////
-        
-        
-        for (i = 0; i < max_players; i++) 
-        {
-             sd = players[i].client_socket;
-              
-            if (FD_ISSET( sd , &master_set)) 
-            {
-            	memset(&BUFFER[0], 0, sizeof(BUFFER));
-                //CHECK FOR CLOSING AND INCOMING MESSAGE
-                if ((valread = read( sd , BUFFER, 1024)) == 0)
-                {
-			// CLIENT DISCONNECTED
-			getpeername(sd , (struct sockaddr*)&address , (socklen_t*)&addrlen);
-			printf("PASS\tCLIENT %d HAS LEFT SERVER IP:%s\tPORT:%d\n" , players[i].ID, inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
+	}
 
-			//CLOSE SOCKET AND MARK AS ZERO
-			close( sd );
-			players[i].client_socket = 0;
-                }
-                else
-                {
-                	// PROTOCOL RECEIVE : SESSION ID 0 - 10000 / NEW GAME 0 - DIFFICULTY - GUESS 
-                	// PROTOCOL SEND    : SESSION ID - WORD STATE - GUESSES 
 
-                	
-			printf("TEST\tSERVER START REQUEST : %s\n", BUFFER);
-			
-			char * array[2];
-			
-			int i = 0;
-			
-			array[i] = strtok(BUFFER, " ");
-			
-			while(array[i] != NULL){
-				array[++i] = strtok(NULL, " ");
+	//CREATE MAIN SOCKET
+	if( (serv_socket = socket(AF_INET , SOCK_STREAM , 0)) == 0){
+	perror("ERROR\tSOCKET ERROR");
+	exit(EXIT_FAILURE);
+	}else{printf("PASS\tSOCKET CREATED AT %d\n", serv_socket);}
+
+
+	//MAIN SOCKET ALLOW MULTIPLY CONNECTIONS
+	if( setsockopt(serv_socket, SOL_SOCKET, SO_REUSEADDR, (char * ) & opt, sizeof(opt)) < 0 ){
+	perror("ERROR\tSET SOCKET OPTION ERROR");
+	exit(EXIT_FAILURE);
+	}else{printf("PASS\tSOCKET MULTIPLY CONNECTIONS SET\n");}
+
+
+	address.sin_family = AF_INET;
+	address.sin_addr.s_addr = INADDR_ANY;
+	address.sin_port = htons( PORT );
+
+
+	//bind the socket to localhost port 8888
+	if (bind(serv_socket, (struct sockaddr *)&address, sizeof(address))<0){
+	perror("ERROR\tBIND ERROR");
+	exit(EXIT_FAILURE);
+	}else{printf("PASS\tSOCKET BINDED TO ADDRESS\n");}
+
+
+	printf("PASS\tLISTENING PORT : %d \n", PORT);
+
+
+	//LISTEN - SET MAX 3 CONNECTION - TESTING
+	if (listen(serv_socket, 3) < 0){
+	perror("ERROR\tLISTENING ERROR");
+	exit(EXIT_FAILURE);
+	}else{printf("PASS\tSOCKET LISTENING\n");}
+
+
+	//WAITING FOR CONNECTIONS MESSAGE
+	addrlen = sizeof(address);
+	puts("PASS\tSERVER WAITING FOR CONNECTIONS . . . . \n\n");
+     
+	while(TRUE) 
+	{
+    
+		FD_ZERO(&master_set); // CLEAR MASTER SET
+	  
+		//ADD MAIN SOCKET TO SET
+		FD_SET(serv_socket, &master_set);
+		max_sd = serv_socket;
+		
+		
+		/////////////////////////////////////////////////////////////////////////////////
+		//ADD CHILD SOCKET TO SET
+		for ( i = 0 ; i < max_players ; i++) 
+		{
+		    sd = players[i].client_socket; // SOCKET DESCRIPTOR
+		    if(sd > 0) FD_SET( sd , &master_set); // ADD TO READ LIST IOF VALID SOCKET DESCRIPTOR
+		    if(sd > max_sd) max_sd = sd; // WE NEED HIGHEST FILE DESCRIPTOR FOR THE SELECT FUNCTION
+		}
+		/////////////////////////////////////////////////////////////////////////////////
+	    
+		
+		activity = select( max_sd + 1 , &master_set , NULL , NULL , NULL); // CALL SELECT AND WAIT FOR ACTIVITY - NO TIMEOUT SELECTED SO INDEFINITE
+	    
+	    
+		if ((activity < 0) && (errno != EINTR)) printf("ERROR\tSELECT ERROR - FUCKED\n");
+        
+          
+          
+		/////////////////////////////////////////////////////////////////////////////////
+		// CHECK MASTER SOCKET FOR INCOMING CONNECTION
+		if (FD_ISSET(serv_socket, &master_set)) 
+		{
+			if ((new_socket = accept(serv_socket, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0)
+			{perror("accept");exit(EXIT_FAILURE);
+			}else{printf("\n\nPASS\tNEW PLAYER FD:%d IP:%s PORT:%d \n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));}
+
+			// SEND WELCOME MESSAGE
+			if(send(new_socket, welcome, strlen(welcome), 0) != strlen(welcome) ) 
+			{perror("ERROR\tSEND ERROR\n");
+			}else{printf("PASS\tWELCOME MESSAGE SENT\n");}
+
+
+			//ADD NEW PLAYER TO LIST OF PLAYERS
+			for (i = 0; i < max_players; i++) 
+			{
+			//FIND EMTPY POSITION
+			if(  players[i].client_socket == 0 )
+			{
+			    players[i].client_socket = new_socket;
+			    printf("PASS\tADDED CLIENT %d TO PLAYER LIST POSITION %d\n" , new_socket, i);
+			     
+			    break;
 			}
-			BUFFER[sizeof(BUFFER)] = '\0';
-			
-			printf("TEST\tARRAY 0 : %s\n", array[0]);
-			printf("TEST\tARRAY 1 : %s\n", array[1]);
-			printf("TEST\tARRAY 2 : %s\n", array[2]);
-			
-			if(strcmp(array[0], "0") == 0){ // NEW GAME REQUEST
-			
-				printf("NEW\tPLAYER REQUEST\n");
-
-				players[i].word = word[rand() % NUMWORDS];
-				
-				memset(&players[i].word_state, 0 , sizeof(players[i].word_state));
-				
-				for(x = 0; x < strlen(players[i].word); x++){
-					players[i].word_state[x] = '-';
-				}
-				
-				hashkey(players[i].sessionID, sizeof players[i].sessionID - 1);
-				assert(players[i].sessionID[41] == '\0');
-				printf("NEW\tSESSION ID:%s\n", players[i].sessionID);
-				
-				printf("INFO\t WORD:%s\tSIZE:%d\n", players[i].word, (int)strlen(players[i].word));
-				printf("INFO\tSTATE:%s\tSIZE:%d\n", players[i].word_state, (int)strlen(players[i].word_state));
-				
-				printf("WORD\tNEW WORD GENERATED : %s\n", players[i].word);
-				
-				if(strcmp(array[1], "1")){
-					players[i].guesses = 7;
-					players[i].difficulty = 1;
-				}
-				else if(strcmp(array[1], "2")){
-					players[i].guesses = 8;
-					players[i].difficulty = 2;
-				}
-				else if(strcmp(array[1], "3")){
-					players[i].guesses = 9;
-					players[i].difficulty = 3;
-				}
-				else {
-					players[i].guesses = 7;
-					players[i].difficulty = 1;
-				}
-				
-				len = strlen(players[i].sessionID) + strlen(players[i].word) + 4;
-			
+			else{
 				memset(&BUFFER[0], 0, sizeof(BUFFER));
-				printf("TEST\tBUFFER_NOW:%s\n", BUFFER);
-				snprintf(BUFFER, len, "%s %s %d", players[i].sessionID, players[i].word_state, players[i].guesses);
-				printf("PASS\tBUFFER_END:%s\n", BUFFER);
-			 	
 				send(sd , BUFFER , strlen(BUFFER) , 0 );
 			}
-			else{ //SEARCH SESSION ID AND RE-ACTIVATE OLD GAME
-			
-				printf("CONT\tPLAYER REQUEST\n");
-			
-				int found = FALSE;
-				for(x = 0; x < PLAYERMAX; x++) if(strcmp(array[0], players[x].sessionID)) found = TRUE;
-				
-				if(found){
-				len = strlen(players[i].sessionID) + strlen(players[i].word) + 4;
-			
+			}
+		}
+		/////////////////////////////////////////////////////////////////////////////////
+        
+        
+		for (i = 0; i < max_players; i++) 
+		{
+		     sd = players[i].client_socket;
+		      
+			if (FD_ISSET( sd , &master_set)) 
+			{
 				memset(&BUFFER[0], 0, sizeof(BUFFER));
-				printf("TEST\tBUFFER_NOW:%s\n", BUFFER);
-				snprintf(BUFFER, len, "%s %s %d", players[i].sessionID, players[i].word_state, players[i].guesses);
-				printf("PASS\tBUFFER_END:%s\n", BUFFER);
-				}
-				else{//SEND EMPTY RESPONSE - END GAME
-					memset(&BUFFER[0], 0, sizeof(BUFFER));
-					send(sd , BUFFER , strlen(BUFFER) , 0 );
-					close(sd);
+				//CHECK FOR CLOSING AND INCOMING MESSAGE
+				if ((valread = read( sd , BUFFER, 1024)) == 0)
+				{
+					// CLIENT DISCONNECTED
+					getpeername(sd , (struct sockaddr*)&address , (socklen_t*)&addrlen);
+					printf("PASS\tCLIENT %d HAS LEFT SERVER IP:%s\tPORT:%d\n" , players[i].ID, inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
+
+					//CLOSE SOCKET AND MARK AS ZERO
+					close( sd );
 					players[i].client_socket = 0;
 				}
-				
+				else
+				{
+					// PROTOCOL RECEIVE : SESSION-ID(KEY)/NEW(0) --- DIFFICULTY/END --- GUESS 
+					// PROTOCOL SEND    : SESSION-ID --- WORD --- GUESSES 
+
+					printf("\nOPEN\tWORKING...\n");
+
+					array[i] = strtok(BUFFER, " ");
+
+					while(array[i] != NULL){array[++i] = strtok(NULL, " ");}
+					
+					BUFFER[sizeof(BUFFER)] = '\0';
+
+					//printf("TEST\tARRAY 0 : %s\n", array[0]);
+					//printf("TEST\tARRAY 1 : %s\n", array[1]);
+					//printf("TEST\tARRAY 2 : %s\n", array[2]);
+
+					if(strcmp(array[0], "0") == 0){ // NEW GAME REQUEST
+					
+						printf("NEW\tPLAYER REQUEST..\n");
+
+						players[i].word = word[rand() % NUMWORDS];
+
+						memset(&players[i].word_state, 0 , sizeof(players[i].word_state));
+
+						for(x = 0; x < strlen(players[i].word); x++){
+							players[i].word_state[x] = '-';
+						}
+
+						hashkey(players[i].sessionID, sizeof players[i].sessionID - 1);
+						assert(players[i].sessionID[41] == '\0');
+						printf("NEW\tSESSION CREATED : %s\n", players[i].sessionID);
+
+						//printf("INFO\t WORD:%s\tSIZE:%d\n", players[i].word, (int)strlen(players[i].word));
+						//printf("INFO\tSTATE:%s\tSIZE:%d\n", players[i].word_state, (int)strlen(players[i].word_state));
+
+						//printf("WORD\tNEW WORD GENERATED : %s\n", players[i].word);
+
+						if(strcmp(array[1], "1")){
+							players[i].guesses = 7;
+							players[i].difficulty = 1;
+						}
+						else if(strcmp(array[1], "2")){
+							players[i].guesses = 8;
+							players[i].difficulty = 2;
+						}
+						else if(strcmp(array[1], "3")){
+							players[i].guesses = 9;
+							players[i].difficulty = 3;
+						}
+						else {
+							players[i].guesses = 7;
+							players[i].difficulty = 1;
+						}
+
+						len = strlen(players[i].sessionID) + strlen(players[i].word) + 4;
+
+						memset(&BUFFER[0], 0, sizeof(BUFFER));
+						//printf("TEST\tBUFFER_NOW:%s\n", BUFFER);
+						snprintf(BUFFER, len, "%s %s %d", players[i].sessionID, players[i].word_state, players[i].guesses);
+						//printf("PASS\tBUFFER_END:%s\n", BUFFER);
+					 	
+						send(sd , BUFFER , strlen(BUFFER) , 0 );
+		
+					}
+					else{ //SEARCH SESSION ID AND RE-ACTIVATE OLD GAME
+
+						printf("CONT\tPLAYER REQUEST\n");
+						
+						int found = FALSE;
+						
+						char mySessionId[42];
+						
+						strcpy(mySessionId, array[0]);
+
+						for(x = 0; x < PLAYERMAX; x++)
+							if(strcmp(players[x].sessionID, mySessionId) == 0)
+								found = TRUE;
+
+						if(found){
+							
+							//printf("DATA\tFOUND SECTION\n");
+							
+							int guessed = FALSE;
+							
+							guess = *array[2];
+							
+							//printf("CHAR\tCHECKER:%c\n", guess);
+							
+							//printf("TEST\tLENGTH:%d\n", (int)strlen(players[i].word));
+						
+							for(x = 0; x < (int)strlen(players[i].word); x++){
+							
+								//printf("CHECK\tLETTERS %c %c \n", players[i].word[x], guess);
+								
+								if(players[i].word[x] == guess){
+									//printf("WIN\t%c %c\n", players[i].word[x], guess);
+									guessed = TRUE;
+									//printf("TEST\tBEFORE\n");
+									players[i].word_state[x] = guess;
+									//printf("TEST\tAFTER\n");
+									//printf("UPDATE\tWORD:%s\n", players[i].word_state);
+									
+									
+								}
+								else{
+									//printf("GUESS\tCHAR:%c\n", guess);
+									//printf("SAME\tWORD:%s\n", players[i].word_state);
+								}
+							}
+							
+							if(!guessed) players[i].guesses--;
+							
+							len = strlen(players[i].sessionID) + strlen(players[i].word) + 4;
+							memset(&BUFFER[0], 0, sizeof(BUFFER));
+							//printf("TEST\tBUFFER_NOW:%s\n", BUFFER);
+							snprintf(BUFFER, len, "%s %s %d", players[i].sessionID, players[i].word_state, players[i].guesses);
+							//printf("PASS\tBUFFER_END:%s\n", BUFFER);
+							send(sd , BUFFER , strlen(BUFFER) , 0 );
+						}
+
+						else{//SEND EMPTY RESPONSE - END GAME
+							//printf("DATA\tNOT FOUND SECTION\n");
+							memset(&BUFFER[0], 0, sizeof(BUFFER));
+							send(sd , BUFFER , strlen(BUFFER) , 0 );
+							close(sd);
+							players[i].client_socket = 0;
+						}
+
+					}
+				}
 			}
-                }
-            }
-        }
+		}
     }
       
     return 0;
