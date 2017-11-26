@@ -4,14 +4,14 @@
 		Daniel Gadd - 		K00202350
 		Samuel McSweeny - 	K00200955
 
- 	Name: 	TCPClient.c
+ 	Name: 	Client.c
 
  	Description:
 		Creates a connecting socket. Connects
 		to server and calls str_cli to handle
 		I/O to and drom the server.
 
-	Compile: gcc -o cli TCPClient.c str_cli.c
+	Compile: gcc -o cli Client.c HandleIO.c
  * -----------------------------------------------------------------------------
  */
 

@@ -14,7 +14,7 @@
 		- get_in_addr: get IPv4 or IPv6 address
 
 	Compile: 
-		gcc -o srv ForkingServer.c run_process.c ServerUtility.c
+		gcc -o srv ForkingServer.c PlayHangman.c ServerUtility.c
  * -----------------------------------------------------------------------------
  */
 
@@ -29,10 +29,9 @@
  /* -- sigchld_handler: handles signals to reap child processes -- */
  void sigchld_handler(int s)
  {
-    // waitpid() might overwrite errno, so it has to be restored
-    int saved_errno = errno;
+    int saved_errno = errno;							
     while( waitpid(-1, NULL, WNOHANG) > 0 );
-    errno = saved_errno;
+    errno = saved_errno;							// waitpid() might overwrite errno, so it has to be restored
  }
 
  /* -- get sockaddr, IPv4 or IPv6 addresses -- */
