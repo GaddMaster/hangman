@@ -1,8 +1,8 @@
 Team Info
 	TEAM 2 - Hangman Forking Server w/ Selecting Client
-		* Sean Horgan		K00196030
-		* Daniel Gadd 		K00202350
-		* Samuel McSweeny 	K00200955
+		Sean Horgan		K00196030
+		Daniel Gadd 		K00202350
+		Samuel McSweeny 	K00200955
 
 	Server handles multiple clients by splitting new connnections
 	into their own processes through a call to fork(). sig_chld
