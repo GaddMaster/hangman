@@ -1,11 +1,9 @@
-=
 Compile & Run CLIENT
 
 	COMPILE:	gcc -o cli Client.c HandleIO.c
 	RUN:		./cli <address> <port>
 
 
-=
 Compile & Run SERVER
 
 
