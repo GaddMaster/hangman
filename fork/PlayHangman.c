@@ -25,7 +25,7 @@
  };
 
  /* -- Contains all the hangman functionality -- */
- int run_process(int in, int out) {
+ int playHangman(int in, int out) {
 
  	int lives = maxlives;							// Max number of player lives
  	int game_state = 'I';							// I = Incomplete

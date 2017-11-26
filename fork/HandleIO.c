@@ -23,7 +23,7 @@
 
  # include "AddedStuff.h"
 
-   void str_cli(FILE *fp, int sockfd)
+   void handleIO(FILE *fp, int sockfd)
    {
 	int maxfdp1;
 	fd_set rset;

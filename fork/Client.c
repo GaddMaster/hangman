@@ -41,7 +41,7 @@ int main (int argc, char **argv)
 	connect(sockfd, (SA *) & servaddr, sizeof(servaddr));
 	
 	/* -- Handle I/O by calling str_cli -- */
-	str_cli(stdin, sockfd);
+	handleIO(stdin, sockfd);
 
 	exit(0);
 }

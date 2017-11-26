@@ -123,7 +123,7 @@
 		/* Print that fork succeeded with child process ID */
 		printf("STATUS: Fork succeeded!\nProcess ID: %d\n", getpid());
 		close(listenfd);						// close listening sock
-		run_process(connfd, connfd);					// process the request
+		playHangman(connfd, connfd);					// process the request
 		exit (0);
 	    }
 

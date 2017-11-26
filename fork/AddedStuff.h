@@ -39,7 +39,7 @@
 
 void	 Shutdown(int, int);
 
- int run_process(int, int);	/* definition for hangman function */
+ int playHangman(int, int);	/* definition for hangman function */
 
  void error (char *msg);	/* definitoin for perror wrapper */
 
@@ -47,4 +47,4 @@ void	 Shutdown(int, int);
 
  void *get_in_addr(struct sockaddr *sa);  /* definition for get_in_addr */
 
- void str_cli(FILE *fp, int sockfd);	  /* definition for cli I/O handler */
+ void handleIO(FILE *fp, int sockfd);	  /* definition for cli I/O handler */
