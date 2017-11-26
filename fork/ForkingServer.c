@@ -120,6 +120,7 @@
 
 	    /* -- fork: create a child process that handles new connection -- */
 	    if ( (childpid = fork()) == 0 ) { 	/* child process */
+	    
 		/* Print that fork succeeded with child process ID */
 		printf("STATUS: Fork succeeded!\nProcess ID: %d\n", getpid());
 		close(listenfd);		/* close listening sock */

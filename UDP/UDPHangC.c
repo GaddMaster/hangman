@@ -1,7 +1,7 @@
 /*
  * UDP Client
- * Need to Tidy Up
  * Add ability to choose to play or leave etc..
+ * Match Dans Data Sets
  */
 
 #include <arpa/inet.h>
